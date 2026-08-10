@@ -13,15 +13,18 @@ internal enum class CallAlertSource {
 
 /**
  * Shared call-buzz coordinator for native phone state and strict VoIP notifications.
- * Multiple sources can be active at once, but only one throttled repeat loop drives the strap.
+ *
+ * This is intentionally a small state machine: phone/VoIP sources acquire tokens, while one
+ * scheduler owns the physical WHOOP actuator. That prevents two simultaneous call sources from
+ * doubling the haptic traffic.
  */
 internal object CallAlertController {
-    /** Hard ceiling on how long one call cycle can hold a token. A stop event isn't guaranteed — a
-     *  PHONE_STATE=IDLE broadcast can be dropped, and a VoIP notification can be removed without
-     *  onNotificationRemoved. Without this, a leaked token makes `start()` see `wasInactive = false`
-     *  forever and silently swallow the NEXT call's alert until a process restart. Auto-clear after
-     *  this window (re-armed on each sign of life from a call source). */
-    private const val MAX_RING_WINDOW_MS = 60_000L
+    /**
+     * Hard ceiling on one call cycle. A stop event is not guaranteed — PHONE_STATE=IDLE can be
+     * dropped and a VoIP notification can disappear without a removal callback. Five minutes is
+     * long enough for legitimate calls while still self-healing a leaked token.
+     */
+    private const val MAX_RING_WINDOW_MS = 5 * 60_000L
 
     private val handler = Handler(Looper.getMainLooper())
     private val policy = CallAlertPolicy()
@@ -37,17 +40,21 @@ internal object CallAlertController {
         }
     }
 
-    /** Self-heal: clear all sources if a stop event was missed (see [MAX_RING_WINDOW_MS]). */
+    /** Self-heal a leaked source if Android never delivers its stop event. */
     private val maxRingRunnable = Runnable { stopAll() }
 
     fun start(context: Context, source: CallAlertSource, key: String = source.name): Boolean {
         if (!sourceEnabled(context, source)) return false
         appContext = context.applicationContext
+        val token = "${source.name}:$key"
         val wasInactive = activeTokens.isEmpty()
-        activeTokens.add("${source.name}:$key")
-        // (Re)arm the self-heal watchdog on every sign of life so a leaked token can't wedge the feature.
+        activeTokens.add(token)
+
+        // Re-arm the watchdog whenever the source reports life. This prevents a dropped stop
+        // event from permanently wedging the next call cycle.
         handler.removeCallbacks(maxRingRunnable)
         handler.postDelayed(maxRingRunnable, MAX_RING_WINDOW_MS)
+
         if (wasInactive) {
             buzzCount = 0
             lastBuzzAtMs = null
@@ -74,15 +81,24 @@ internal object CallAlertController {
 
     private fun maybeBuzz(context: Context) {
         pruneDisabledSources(context)
-        val active = activeTokens.isNotEmpty()
+        if (activeTokens.isEmpty()) return
+
         val now = System.currentTimeMillis()
-        if (!policy.shouldBuzz(active, buzzCount, lastBuzzAtMs, now)) return
+        if (!policy.shouldBuzz(true, buzzCount, lastBuzzAtMs, now)) return
+
+        // Do not consume a call-alert slot while the strap is temporarily disconnected. The
+        // existing connection service can recover the BLE link, and the next policy tick will
+        // retry the same call instead of silently losing the alert.
         if (!deliveryAllowed(context)) {
             scheduleNext()
             return
         }
 
-        val ble = (context.applicationContext as? NoopApplication)?.ble ?: return
+        val ble = (context.applicationContext as? NoopApplication)?.ble ?: run {
+            scheduleNext()
+            return
+        }
+
         ble.buzz(NotifPrefs.callLoops(context))
         buzzCount += 1
         lastBuzzAtMs = now
@@ -127,8 +143,13 @@ internal object CallAlertController {
         if (!NotifPrefs.getBool(context, NotifPrefs.MASTER, false)) return false
         if (!NotifPrefs.getBool(context, NotifPrefs.CALLS_MASTER, false)) return false
         if (NotifPrefs.inQuietHours(context)) return false
+
         val ble = (context.applicationContext as? NoopApplication)?.ble ?: return false
-        if (NotifPrefs.getBool(context, NotifPrefs.WORN, true) && !ble.state.value.worn) return false
+        val state = ble.state.value
+        // `bonded` can remain true after a transient GATT disconnect. A haptic command sent in
+        // that window would be lost but would still count as a buzz, so require an active link.
+        if (!state.connected || !state.bonded) return false
+        if (NotifPrefs.getBool(context, NotifPrefs.WORN, true) && !state.worn) return false
         return true
     }
 }
