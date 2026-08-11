@@ -1,6 +1,7 @@
 package com.noop.ui
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -29,12 +30,14 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -60,9 +63,8 @@ import com.noop.notif.CallAlertSource
 /**
  * NOOP Next notification control centre.
  *
- * The previous screen mixed every setting into a long list. This version puts the important
- * path first: enable wrist alerts, verify the strap, configure calls, then configure apps.
- * Existing preference keys are intentionally preserved so upgrades don't reset the user's choices.
+ * The screen is intentionally event-first: readiness, calls, apps, behaviour, then access and
+ * diagnostics. Existing preference keys are preserved so upgrades never reset user choices.
  */
 @Composable
 fun NotificationsSettingsScreen(vm: AppViewModel) {
@@ -79,6 +81,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
     var allOther by remember { mutableStateOf(NotifPrefs.getBool(context, NotifPrefs.ALL_OTHER, false)) }
     var callPattern by remember { mutableStateOf(NotifPrefs.callPattern(context)) }
     var permissionDenied by remember { mutableStateOf(false) }
+    var appQuery by remember { mutableStateOf("") }
 
     val enabledState: SnapshotStateMap<String, Boolean> = remember {
         mutableStateMapOf<String, Boolean>().apply {
@@ -100,7 +103,8 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
     }
 
     val enabledApps = enabledState.values.count { it }
-    val deliveryReady = master && live.connected && (!wornOnly || live.worn) && !quiet
+    val deliveryReady = master && live.connected && live.encryptedBond && (!wornOnly || live.worn) && !quiet
+    val notificationAccess = notificationAccessGranted(context)
 
     ScreenScaffold(
         title = "Notifications",
@@ -109,6 +113,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
         NotificationHero(
             enabled = master,
             connected = live.connected,
+            encryptedBond = live.encryptedBond,
             worn = live.worn,
             ready = deliveryReady,
             enabledApps = enabledApps,
@@ -126,7 +131,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
             phoneEnabled = phoneCalls,
             voipEnabled = voipCalls,
             pattern = callPattern,
-            bonded = live.bonded,
+            commandReady = live.connected && live.encryptedBond,
             permissionDenied = permissionDenied,
             onEnabled = {
                 calls = it
@@ -167,6 +172,8 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
 
         AppsControlCard(
             master = master,
+            query = appQuery,
+            onQueryChange = { appQuery = it },
             enabledState = enabledState,
             patternState = patternState,
             onToggle = { app, value ->
@@ -204,7 +211,15 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
             },
         )
 
-        AccessCard(context = context)
+        AccessCard(context = context, notificationAccess = notificationAccess)
+        DiagnosticsCard(
+            enabled = master,
+            connected = live.connected,
+            encryptedBond = live.encryptedBond,
+            worn = live.worn,
+            notificationAccess = notificationAccess,
+            callsEnabled = calls && (phoneCalls || voipCalls),
+        )
     }
 }
 
@@ -212,6 +227,7 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
 private fun NotificationHero(
     enabled: Boolean,
     connected: Boolean,
+    encryptedBond: Boolean,
     worn: Boolean,
     ready: Boolean,
     enabledApps: Int,
@@ -228,6 +244,7 @@ private fun NotificationHero(
                         when {
                             !enabled -> "Off — your WHOOP will stay quiet."
                             !connected -> "Waiting for your WHOOP to connect."
+                            !encryptedBond -> "Connected, but the secure command link is not ready."
                             !worn -> "Strap connected, but not currently worn."
                             else -> "Ready — important events can reach your wrist."
                         },
@@ -246,6 +263,11 @@ private fun NotificationHero(
                 )
                 StatusChip(
                     icon = Icons.Filled.CheckCircle,
+                    text = if (encryptedBond) "Secure link" else "Link not ready",
+                    positive = encryptedBond,
+                )
+                StatusChip(
+                    icon = Icons.Filled.NotificationsActive,
                     text = "$enabledApps apps",
                     positive = enabledApps > 0,
                 )
@@ -256,7 +278,7 @@ private fun NotificationHero(
                     Text("Test your wrist", style = NoopType.body, color = Palette.textPrimary)
                     Text("Sends a short two-pulse test now.", style = NoopType.footnote, color = Palette.textTertiary)
                 }
-                ActionPill("Test buzz", Icons.Filled.GraphicEq, connected, onTest)
+                ActionPill("Test buzz", Icons.Filled.GraphicEq, connected && encryptedBond, onTest)
             }
         }
     }
@@ -269,7 +291,7 @@ private fun CallsControlCard(
     phoneEnabled: Boolean,
     voipEnabled: Boolean,
     pattern: BuzzPattern,
-    bonded: Boolean,
+    commandReady: Boolean,
     permissionDenied: Boolean,
     onEnabled: (Boolean) -> Unit,
     onPhone: (Boolean) -> Unit,
@@ -289,12 +311,12 @@ private fun CallsControlCard(
             ToggleRow("VoIP calls", "Best-effort detection for supported calling apps.", voipEnabled, master, onVoip)
             DividerLine()
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Call pattern", style = NoopType.body, color = Palette.textPrimary)
                     Text("Immediate buzz + finite reminders while ringing.", style = NoopType.footnote, color = Palette.textTertiary)
                 }
                 PatternPicker(pattern, master, "call alerts", onPattern)
-                ActionPill("Test", Icons.Filled.GraphicEq, bonded && master, onTest)
+                ActionPill("Test", Icons.Filled.GraphicEq, commandReady && master, onTest)
             }
         }
     }
@@ -303,29 +325,53 @@ private fun CallsControlCard(
 @Composable
 private fun AppsControlCard(
     master: Boolean,
+    query: String,
+    onQueryChange: (String) -> Unit,
     enabledState: SnapshotStateMap<String, Boolean>,
     patternState: SnapshotStateMap<String, BuzzPattern>,
     onToggle: (NotifApp, Boolean) -> Unit,
     onPattern: (NotifApp, BuzzPattern) -> Unit,
     onTest: (NotifApp) -> Unit,
 ) {
+    val filtered = remember(query) {
+        val normalized = query.trim().lowercase()
+        if (normalized.isEmpty()) notifCatalog
+        else notifCatalog.filter { app ->
+            app.name.lowercase().contains(normalized) || app.id.lowercase().contains(normalized)
+        }
+    }
+
     SectionCard(Icons.Filled.NotificationsActive, "Apps", "Choose exactly which notifications deserve your attention.") {
-        val grouped = notifCatalog.groupBy { it.category }
-        grouped.forEach { (category, apps) ->
-            Text(category.title, style = NoopType.caption, color = Palette.accent)
-            apps.forEachIndexed { index, app ->
-                AppAlertRow(
-                    app = app,
-                    enabled = enabledState[app.id] ?: false,
-                    pattern = patternState[app.id] ?: app.category.defaultPattern,
-                    interactive = master,
-                    onToggle = { onToggle(app, it) },
-                    onPattern = { onPattern(app, it) },
-                    onTest = { onTest(app) },
-                )
-                if (index != apps.lastIndex) DividerLine()
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            placeholder = { Text("Search apps") },
+            shape = RoundedCornerShape(12.dp),
+        )
+
+        if (filtered.isEmpty()) {
+            Text("No supported app matches this search.", style = NoopType.footnote, color = Palette.textTertiary)
+        } else {
+            val grouped = filtered.groupBy { it.category }
+            grouped.forEach { (category, apps) ->
+                Text(category.title, style = NoopType.caption, color = Palette.accent)
+                apps.forEachIndexed { index, app ->
+                    AppAlertRow(
+                        app = app,
+                        enabled = enabledState[app.id] ?: false,
+                        pattern = patternState[app.id] ?: app.category.defaultPattern,
+                        interactive = master,
+                        onToggle = { onToggle(app, it) },
+                        onPattern = { onPattern(app, it) },
+                        onTest = { onTest(app) },
+                    )
+                    if (index != apps.lastIndex) DividerLine()
+                }
+                if (category != grouped.keys.last()) Spacer(Modifier.size(10.dp))
             }
-            if (category != grouped.keys.last()) Spacer(Modifier.size(10.dp))
         }
     }
 }
@@ -392,26 +438,111 @@ private fun NotificationBehaviourCard(
 }
 
 @Composable
-private fun AccessCard(context: Context) {
+private fun AccessCard(context: Context, notificationAccess: Boolean) {
     SectionCard(Icons.Filled.Settings, "Permissions & privacy", "NOOP needs Android notification access to see app events.") {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Info, contentDescription = null, tint = Palette.accent, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(
-                "Notification contents stay on this phone. NOOP uses the posting app and event state to decide whether to buzz your WHOOP.",
-                style = NoopType.footnote,
-                color = Palette.textSecondary,
-            )
-        }
-        ActionPill(
-            "Open Notification Access",
-            Icons.Filled.OpenInNew,
-            true,
-        ) {
+        StatusRow(
+            icon = Icons.Filled.NotificationsActive,
+            title = "Notification access",
+            detail = if (notificationAccess) "Enabled — app events can be received locally." else "Required for app and VoIP notification detection.",
+            positive = notificationAccess,
+        )
+        Spacer(Modifier.size(6.dp))
+        StatusRow(
+            icon = Icons.Filled.Phone,
+            title = "Phone state permission",
+            detail = if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                "Enabled — native call state can be detected."
+            } else {
+                "Required only for native cellular call detection."
+            },
+            positive = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED,
+        )
+        DividerLine()
+        Text(
+            "Notification contents stay on this phone. NOOP uses the posting app and event state to decide whether to buzz your WHOOP.",
+            style = NoopType.footnote,
+            color = Palette.textSecondary,
+        )
+        ActionPill("Open Notification Access", Icons.Filled.OpenInNew, true) {
             runCatching {
                 context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         }
+    }
+}
+
+@Composable
+private fun DiagnosticsCard(
+    enabled: Boolean,
+    connected: Boolean,
+    encryptedBond: Boolean,
+    worn: Boolean,
+    notificationAccess: Boolean,
+    callsEnabled: Boolean,
+) {
+    val ready = enabled && connected && encryptedBond && notificationAccess && (!NotifPrefs.getBool(LocalContext.current, NotifPrefs.WORN, true) || worn)
+    SectionCard(Icons.Filled.GraphicEq, "Delivery diagnostics", "A quick explanation of why an alert can or cannot reach your wrist.") {
+        StatusRow(
+            icon = Icons.Filled.Watch,
+            title = "WHOOP connection",
+            detail = if (connected) "Connected" else "Disconnected — connect your WHOOP first.",
+            positive = connected,
+        )
+        StatusRow(
+            icon = Icons.Filled.CheckCircle,
+            title = "Secure command link",
+            detail = if (encryptedBond) "Ready for haptic commands" else "Not ready — haptics will be held.",
+            positive = encryptedBond,
+        )
+        StatusRow(
+            icon = Icons.Filled.NotificationsActive,
+            title = "Notification listener",
+            detail = if (notificationAccess) "Ready for app events" else "Disabled — app alerts and VoIP detection are unavailable.",
+            positive = notificationAccess,
+        )
+        StatusRow(
+            icon = Icons.Filled.Call,
+            title = "Call alerts",
+            detail = if (callsEnabled) "Enabled" else "Disabled",
+            positive = callsEnabled,
+        )
+        DividerLine()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Overall readiness", style = NoopType.body, color = Palette.textPrimary)
+                Text(
+                    if (ready) "Everything required for local wrist delivery is ready."
+                    else "One or more prerequisites need attention.",
+                    style = NoopType.footnote,
+                    color = Palette.textTertiary,
+                )
+            }
+            StatusChip(Icons.Filled.CheckCircle, if (ready) "READY" else "CHECK", ready)
+        }
+    }
+}
+
+@Composable
+private fun StatusRow(icon: ImageVector, title: String, detail: String, positive: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = if (positive) Palette.accent else Palette.textTertiary, modifier = Modifier.size(18.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = NoopType.body, color = Palette.textPrimary)
+            Text(detail, style = NoopType.footnote, color = Palette.textTertiary)
+        }
+        StatusChip(Icons.Filled.CheckCircle, if (positive) "OK" else "WAIT", positive)
+    }
+}
+
+private fun notificationAccessGranted(context: Context): Boolean {
+    val enabled = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners") ?: return false
+    val component = ComponentName(context, NoopNotificationListenerService::class.java)
+    return enabled.split(":").any { raw ->
+        runCatching { ComponentName.unflattenFromString(raw) == component }.getOrDefault(false)
     }
 }
 
@@ -516,9 +647,4 @@ private fun NoopSwitch(checked: Boolean, onChange: (Boolean) -> Unit, enabled: B
             uncheckedBorderColor = Palette.hairline,
         ),
     )
-}
-
-@Composable
-private fun DividerLine() {
-    Box(modifier = Modifier.fillMaxWidth().size(height = 1.dp, width = 1.dp).background(Palette.hairline.copy(alpha = 0.65f)))
 }
