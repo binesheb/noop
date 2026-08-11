@@ -88,6 +88,10 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import com.noop.analytics.RouteMath
+import com.noop.ingest.RouteExport
+import kotlinx.coroutines.launch
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -237,10 +241,10 @@ fun WorkoutsScreen(vm: AppViewModel) {
         // into the theme canvas behind the header + top rows (bled full-width up behind the status bar via
         // the scaffold's topBackground plumbing), and the cards float OVER it on the flat surface below. The
         // Android equivalent of the iOS `ScreenScaffold(topBackground: liquidScaffoldSky())`.
-        topBackground = if (showDayCycleBackground) { { LiquidScreenSky(fillHeight = skyBehindCards) } } else null,
+        topBackground = screenBackdropSlot(showDayCycleBackground, skyBehindCards),
         // Sky-behind-cards fills the viewport so the transparent cards reveal the sky the whole way
         // down (Today / Trends / Sleep / metric-detail parity - same two prefs, same two behaviours).
-        fullBleedBackground = showDayCycleBackground && skyBehindCards,
+        fullBleedBackground = screenBackdropFullBleed(showDayCycleBackground, skyBehindCards),
     ) {
         // Start (or stop) a workout right here, not only on Live — mirrors the Live control (#115).
         // Start + Add sit side-by-side as an action row when a strap is bonded (EXP-018 parity).
@@ -1352,6 +1356,46 @@ private fun WorkoutDetailSheet(vm: AppViewModel, row: WorkoutRow, onDismiss: () 
             }
             steps?.let { DetailRow("Steps", "${grouped(it.toDouble())} steps") }  // #398, on-foot sports
             if (!row.notes.isNullOrBlank()) DetailRow("Notes", row.notes)
+
+            // Export the recorded GPS route as a GPX/FIT file (Strava / Garmin Connect / any GPS app).
+            // Only when a route with a drawable path was recorded; the file is built on-device and shared.
+            row.routePolyline?.let { poly ->
+                val track = remember(poly) { RouteMath.decode(poly) }
+                if (track.size >= 2) {
+                    val exportCtx = LocalContext.current
+                    val exportScope = rememberCoroutineScope()
+                    CardDivider()
+                    Text("Export route", style = NoopType.subhead, color = Palette.textPrimary)
+                    Text(
+                        "Save this GPS route as a file to import into Strava, Garmin Connect, or another app. " +
+                            "Built on your phone — nothing is uploaded until you choose to share it.",
+                        style = NoopType.footnote,
+                        color = Palette.textTertiary,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        NoopButton(
+                            text = "GPX",
+                            kind = NoopButtonKind.Secondary,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                exportScope.launch {
+                                    RouteExportShare.share(exportCtx, RouteExport.Format.GPX, track, row)
+                                }
+                            },
+                        )
+                        NoopButton(
+                            text = "FIT",
+                            kind = NoopButtonKind.Secondary,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                exportScope.launch {
+                                    RouteExportShare.share(exportCtx, RouteExport.Format.FIT, track, row)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
 
             // #796 - per-session Effort contribution. The session's captured strain re-homed from a plain
             // value row into a prominent Effort-amber card (the big count-up value + the "This session"
