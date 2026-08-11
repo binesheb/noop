@@ -240,9 +240,13 @@ private fun AppsControlCard(master: Boolean, query: String, onQueryChange: (Stri
 
 @Composable
 private fun AppAlertRow(app: NotifApp, enabled: Boolean, pattern: BuzzPattern, interactive: Boolean, onToggle: (Boolean) -> Unit, onPattern: (BuzzPattern) -> Unit, onTest: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (enabled) Palette.accentMuted.copy(alpha = 0.45f) else Palette.surfaceInset.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 9.dp).alpha(if (interactive) 1f else Palette.disabledOpacity), Alignment.CenterVertically, Arrangement.spacedBy(10.dp)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (enabled) Palette.accentMuted.copy(alpha = 0.45f) else Palette.surfaceInset.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 9.dp).alpha(if (interactive) 1f else Palette.disabledOpacity),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).background(Palette.surfaceRaised), Alignment.Center) { Icon(app.glyph, null, tint = Palette.textSecondary, modifier = Modifier.size(18.dp)) }
-        Column(Modifier.weight(1f), Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(app.name, style = NoopType.body, color = Palette.textPrimary)
             Text(if (enabled) "Wrist alert enabled" else "Off", style = NoopType.footnote, color = if (enabled) Palette.accent else Palette.textTertiary)
         }
@@ -301,9 +305,13 @@ private fun DiagnosticsCard(context: Context, enabled: Boolean, connected: Boole
 
 @Composable
 private fun StatusRow(icon: ImageVector, title: String, detail: String, positive: Boolean) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), Alignment.CenterVertically, Arrangement.spacedBy(10.dp)) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Icon(icon, null, tint = if (positive) Palette.accent else Palette.textTertiary, modifier = Modifier.size(18.dp))
-        Column(Modifier.weight(1f), Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = NoopType.body, color = Palette.textPrimary)
             Text(detail, style = NoopType.footnote, color = Palette.textTertiary)
         }
@@ -332,7 +340,7 @@ private fun SectionCard(icon: ImageVector, title: String, subtitle: String, cont
 @Composable
 private fun ToggleRow(label: String, help: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), Arrangement.spacedBy(2.dp)) { Text(label, style = NoopType.body, color = Palette.textPrimary); Text(help, style = NoopType.footnote, color = Palette.textTertiary) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(label, style = NoopType.body, color = Palette.textPrimary); Text(help, style = NoopType.footnote, color = Palette.textTertiary) }
         Spacer(Modifier.width(12.dp))
         NoopSwitch(checked, onChange, enabled, label)
     }
