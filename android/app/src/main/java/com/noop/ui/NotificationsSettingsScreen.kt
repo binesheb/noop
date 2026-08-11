@@ -61,7 +61,6 @@ import com.noop.notif.CallAlertSource
 fun NotificationsSettingsScreen(vm: AppViewModel) {
     val context = LocalContext.current
     val live by vm.live.collectAsStateWithLifecycle()
-
     var master by remember { mutableStateOf(NotifPrefs.getBool(context, NotifPrefs.MASTER, false)) }
     var calls by remember { mutableStateOf(NotifPrefs.getBool(context, NotifPrefs.CALLS_MASTER, false)) }
     var phoneCalls by remember { mutableStateOf(NotifPrefs.getBool(context, NotifPrefs.CALLS_PHONE, false)) }
@@ -74,25 +73,13 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
     var permissionDenied by remember { mutableStateOf(false) }
     var appQuery by remember { mutableStateOf("") }
 
-    val enabledState: SnapshotStateMap<String, Boolean> = remember {
-        mutableStateMapOf<String, Boolean>().apply {
-            notifCatalog.forEach { put(it.id, NotifPrefs.appEnabled(context, it.id)) }
-        }
-    }
-    val patternState: SnapshotStateMap<String, BuzzPattern> = remember {
-        mutableStateMapOf<String, BuzzPattern>().apply {
-            notifCatalog.forEach { put(it.id, NotifPrefs.appPattern(context, it)) }
-        }
-    }
-
-    val phonePermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
+    val enabledState = remember { mutableStateMapOf<String, Boolean>().apply { notifCatalog.forEach { put(it.id, NotifPrefs.appEnabled(context, it.id)) } } }
+    val patternState = remember { mutableStateMapOf<String, BuzzPattern>().apply { notifCatalog.forEach { put(it.id, NotifPrefs.appPattern(context, it)) } } }
+    val phonePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         phoneCalls = granted
         permissionDenied = !granted
         NotifPrefs.setBool(context, NotifPrefs.CALLS_PHONE, granted)
     }
-
     val enabledApps = enabledState.values.count { it }
     val deliveryReady = master && live.connected && live.encryptedBond && (!wornOnly || live.worn) && !quiet
     val notificationAccess = notificationAccessGranted(context)
@@ -104,44 +91,21 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
             if (!it) CallAlertController.stopAll()
         }) { vm.buzz(loops = 2) }
 
-        CallsControlCard(
-            master = master,
-            enabled = calls,
-            phoneEnabled = phoneCalls,
-            voipEnabled = voipCalls,
-            pattern = callPattern,
-            commandReady = live.connected && live.encryptedBond,
-            permissionDenied = permissionDenied,
-            onEnabled = {
-                calls = it
-                NotifPrefs.setBool(context, NotifPrefs.CALLS_MASTER, it)
-                if (!it) CallAlertController.stopAll()
-            },
-            onPhone = { value ->
+        CallsControlCard(master, calls, phoneCalls, voipCalls, callPattern, live.connected && live.encryptedBond, permissionDenied,
+            { calls = it; NotifPrefs.setBool(context, NotifPrefs.CALLS_MASTER, it); if (!it) CallAlertController.stopAll() },
+            { value ->
                 if (!value) {
-                    phoneCalls = false
-                    permissionDenied = false
+                    phoneCalls = false; permissionDenied = false
                     NotifPrefs.setBool(context, NotifPrefs.CALLS_PHONE, false)
                     CallAlertController.stopSource(CallAlertSource.PHONE)
                 } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-                    phoneCalls = true
-                    permissionDenied = false
+                    phoneCalls = true; permissionDenied = false
                     NotifPrefs.setBool(context, NotifPrefs.CALLS_PHONE, true)
-                } else {
-                    phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-                }
+                } else phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
             },
-            onVoip = {
-                voipCalls = it
-                NotifPrefs.setBool(context, NotifPrefs.CALLS_VOIP, it)
-                if (!it) CallAlertController.stopSource(CallAlertSource.VOIP)
-            },
-            onPattern = {
-                callPattern = it
-                NotifPrefs.setCallPattern(context, it)
-            },
-            onTest = { vm.buzz(loops = callPattern.loops) },
-        )
+            { voipCalls = it; NotifPrefs.setBool(context, NotifPrefs.CALLS_VOIP, it); if (!it) CallAlertController.stopSource(CallAlertSource.VOIP) },
+            { callPattern = it; NotifPrefs.setCallPattern(context, it) },
+            { vm.buzz(loops = callPattern.loops) })
 
         AppsControlCard(master, appQuery, { appQuery = it }, enabledState, patternState,
             { app, value -> enabledState[app.id] = value; NotifPrefs.setAppEnabled(context, app.id, value) },
@@ -153,7 +117,6 @@ fun NotificationsSettingsScreen(vm: AppViewModel) {
             { quiet = it; NotifPrefs.setBool(context, NotifPrefs.QUIET, it) },
             { alarmTimer = it; NotifPrefs.setBool(context, NotifPrefs.ALARM_TIMER, it) },
             { allOther = it; NotifPrefs.setBool(context, NotifPrefs.ALL_OTHER, it) })
-
         AccessCard(context, notificationAccess)
         DiagnosticsCard(context, master, live.connected, live.encryptedBond, live.worn, notificationAccess, calls && (phoneCalls || voipCalls))
     }
@@ -339,7 +302,7 @@ private fun SectionCard(icon: ImageVector, title: String, subtitle: String, cont
 
 @Composable
 private fun ToggleRow(label: String, help: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(label, style = NoopType.body, color = Palette.textPrimary); Text(help, style = NoopType.footnote, color = Palette.textTertiary) }
         Spacer(Modifier.width(12.dp))
         NoopSwitch(checked, onChange, enabled, label)
@@ -349,7 +312,11 @@ private fun ToggleRow(label: String, help: String, checked: Boolean, enabled: Bo
 @Composable
 private fun StatusChip(icon: ImageVector, text: String, positive: Boolean) {
     val tint = if (positive) Palette.accent else Palette.textTertiary
-    Row(Modifier.clip(RoundedCornerShape(50)).background(Palette.surfaceInset).border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 6.dp), Alignment.CenterVertically, Arrangement.spacedBy(6.dp)) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(Palette.surfaceInset).border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(13.dp))
         Text(text, style = NoopType.caption, color = tint)
     }
@@ -358,7 +325,11 @@ private fun StatusChip(icon: ImageVector, text: String, positive: Boolean) {
 @Composable
 private fun ActionPill(label: String, icon: ImageVector, enabled: Boolean, onClick: () -> Unit) {
     val tint = if (enabled) Palette.accent else Palette.textTertiary
-    Row(Modifier.clip(RoundedCornerShape(50)).background(tint.copy(alpha = if (enabled) 0.12f else 0.04f)).border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(50)).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp), Alignment.CenterVertically, Arrangement.spacedBy(5.dp)) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(tint.copy(alpha = if (enabled) 0.12f else 0.04f)).border(1.dp, tint.copy(alpha = 0.25f), RoundedCornerShape(50)).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(13.dp))
         Text(label, style = NoopType.caption, color = tint)
     }
