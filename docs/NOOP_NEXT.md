@@ -1,79 +1,51 @@
-# NOOP Next — product and engineering direction
+# NOOP Next — call haptics and notification UX
 
-NOOP should evolve as a local-first WHOOP companion rather than becoming a second cloud service.
-The guiding rule is: **phone events → local policy → WHOOP BLE haptic/data path**.
+NOOP should feel like a focused wearable companion: phone events are detected locally, evaluated by a small policy engine, and delivered to the WHOOP through the existing BLE transport.
 
-## vNext goals
+## Call-alert behaviour
 
-### 1. Call alerts that feel native
+- Immediate haptic when an enabled native phone or VoIP call begins.
+- Repeat every 6 seconds while the call remains active.
+- Maximum 6 haptic deliveries per call cycle.
+- Duplicate ringing events are idempotent.
+- A disconnected WHOOP does not consume a delivery slot; the alert retries after reconnection.
+- A five-minute watchdog clears a leaked active-call token if Android misses an end/removal callback.
+- Respect notification master, call master, source switches, quiet hours, and wear gating.
+- GSM phone calls remain on the native phone-state path; app notifications are handled by NotificationListenerService.
+- Haptic encoding remains inside `WhoopBleClient.buzz()`, allowing WHOOP 4.0 and WHOOP 5/MG transports to stay hardware-specific.
 
-- Native phone calls are the highest-priority alert source.
-- VoIP calls remain a separate source so a Teams/WhatsApp/Zoom call cannot accidentally enable native phone-call permission.
-- The call state machine must be idempotent: duplicate `RINGING` events do not multiply buzzes.
-- A disconnected strap must not consume a buzz slot. The connection service gets time to recover, then the same alert is retried.
-- A missed `IDLE`/notification-removal event must self-heal with a watchdog.
-- Default cadence: immediate buzz, then up to 5 reminders at 6-second intervals. This is intentionally finite.
-- Respect NOOP master notifications, call master, quiet hours, and wear-gating before sending a haptic.
+## Current UI
 
-### 2. WHOOP haptics
+The Android notification screen already uses the vNext control-centre layout:
 
-Use the existing, hardware-verified haptic path instead of inventing a new BLE command.
+1. Wrist-alert readiness and connection status.
+2. Calls with independent Phone / VoIP controls.
+3. Physical Test Buzz action.
+4. App alerts grouped by category with per-app patterns.
+5. Behaviour rules: wear gating, quiet hours, alarms/timers, other apps.
+6. Permissions and privacy diagnostics.
 
-WHOOP 4.0 uses `RUN_HAPTICS_PATTERN` (command 79) with the payload
-`[patternId, loops, 0, 0, 0]`; NOOP already uses pattern 2 for its graduated alarm-style buzz.
-WHOOP 5/MG has a separately remapped haptic path in the BLE client and must retain its family gate.
+The important path is deliberately visible: **phone event → NOOP detects → policy allows → encrypted WHOOP link → haptic delivered**.
 
-Do not send destructive/firmware commands from notification code.
+## WHOOP 5/MG research
 
-### 3. Better UI
+Current reverse-engineering work indicates that WHOOP 4.0 and WHOOP 5/MG do not use the same haptic opcode. WHOOP 4.0 uses `RUN_HAPTICS_PATTERN` (79), while the current NOOP research notes identify the 5/MG "maverick" haptic command as `0x13`. Keep that mapping inside the BLE client and never duplicate protocol bytes in the notification layer.
 
-The Notifications screen should become an event-control center instead of a long settings list.
+The Android notification code gates delivery on `LiveState.encryptedBond`, not merely the looser `bonded` signal. This prevents a 5/MG live-HR-only connection from being treated as a command-capable link.
 
-Proposed hierarchy:
+## Reliability acceptance tests
 
-1. **Wrist Alerts** — one master state and live delivery status.
-2. **Calls** — one large card with Phone Calls and VoIP Calls as independent switches.
-3. **Test Buzz** — one-tap physical test with the current pattern.
-4. **Apps** — grouped apps with search, enabled state, and pattern preview.
-5. **Quiet Hours** — a single visual time-range control.
-6. **Diagnostics** — last event, last delivery, connection state, and permission state.
+1. Incoming GSM call produces an immediate WHOOP buzz.
+2. A ringing call produces reminders at the finite cadence.
+3. Ending the call stops reminders immediately.
+4. Duplicate RINGING events never create a haptic storm.
+5. Disconnect/reconnect during ringing does not lose a delivery slot.
+6. Quiet hours suppress call haptics.
+7. Wear gating suppresses haptics when the strap is not worn.
+8. A missed stop callback self-heals after the watchdog.
+9. Simultaneous GSM and VoIP sources share one scheduler.
+10. WHOOP 4.0 and WHOOP 5/MG continue using their existing hardware-specific BLE haptic implementations.
 
-The call card should make the important path obvious:
+## Privacy
 
-`Phone rings → NOOP detects it → WHOOP connected → 3-pulse buzz`
-
-If any step is unavailable, show the exact blocker and a single action to fix it.
-
-### 4. Notification reliability
-
-Android's `NotificationListenerService` is the correct local mechanism for app notifications.
-It receives notification posted/removed callbacks and requires the user to grant Notification Access.
-Native phone calls should remain on the phone-state path rather than depending on notification text.
-
-### 5. Privacy
-
-- No notification contents leave the device.
-- No phone numbers are uploaded.
-- No cloud relay is required for call haptics.
-- Store only the minimum state required to make the local event machine reliable.
-
-## Acceptance tests for call haptics
-
-1. Incoming GSM call → WHOOP buzzes immediately.
-2. Call remains ringing → reminders occur every 6 seconds, up to the configured finite limit.
-3. WHOOP disconnects while ringing → no buzz slot is lost; delivery resumes after reconnection.
-4. WHOOP is not worn and wear-gating is enabled → no buzz.
-5. Quiet hours are active → no buzz.
-6. Call ends → the repeat loop stops immediately.
-7. Duplicate `RINGING` broadcasts → no duplicate haptic storm.
-8. A missed stop event → watchdog clears the token and the next call can alert.
-9. VoIP and GSM calls overlapping → one shared haptic scheduler, not two independent loops.
-10. WHOOP 4.0 and WHOOP 5/MG use their existing family-specific haptic transport.
-
-## Research references
-
-- Android `NotificationListenerService`: https://developer.android.com/reference/android/service/notification/NotificationListenerService
-- NOOP Android protocol notes: https://github.com/ryanbr/noop/blob/main/docs/ANDROID.md
-- WHOOP BLE reverse-engineering notes: https://www.rusheelraj.com/blog/whoop/
-
-These references are used for architecture/protocol validation; the implementation remains in NOOP's local-first codebase.
+Notification text, phone numbers, and call logs remain on-device. The call-alert path requires no cloud relay.
