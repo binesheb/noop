@@ -12,18 +12,13 @@ internal enum class CallAlertSource {
 }
 
 /**
- * Shared call-buzz coordinator for native phone state and strict VoIP notifications.
+ * One local scheduler for all active calls.
  *
- * This is intentionally a small state machine: phone/VoIP sources acquire tokens, while one
- * scheduler owns the physical WHOOP actuator. That prevents two simultaneous call sources from
- * doubling the haptic traffic.
+ * Phone and VoIP notifications can arrive from different Android callbacks. They therefore share
+ * one token set and one haptic scheduler so an overlapping call cannot create two independent
+ * reminder loops. No call number, contact, or notification body is retained here.
  */
 internal object CallAlertController {
-    /**
-     * Hard ceiling on one call cycle. A stop event is not guaranteed — PHONE_STATE=IDLE can be
-     * dropped and a VoIP notification can disappear without a removal callback. Five minutes is
-     * long enough for legitimate calls while still self-healing a leaked token.
-     */
     private const val MAX_RING_WINDOW_MS = 5 * 60_000L
 
     private val handler = Handler(Looper.getMainLooper())
@@ -35,23 +30,24 @@ internal object CallAlertController {
 
     private val repeatRunnable = object : Runnable {
         override fun run() {
-            val ctx = appContext ?: return
-            maybeBuzz(ctx)
+            appContext?.let(::maybeBuzz)
         }
     }
 
-    /** Self-heal a leaked source if Android never delivers its stop event. */
+    /** Self-heals if Android misses a call-ended or notification-removed callback. */
     private val maxRingRunnable = Runnable { stopAll() }
 
+    @Synchronized
     fun start(context: Context, source: CallAlertSource, key: String = source.name): Boolean {
         if (!sourceEnabled(context, source)) return false
+
         appContext = context.applicationContext
         val token = "${source.name}:$key"
         val wasInactive = activeTokens.isEmpty()
         activeTokens.add(token)
 
-        // Re-arm the watchdog whenever the source reports life. This prevents a dropped stop
-        // event from permanently wedging the next call cycle.
+        // Re-arm the watchdog on every source update. The watchdog only clears the call state;
+        // it never sends a haptic itself.
         handler.removeCallbacks(maxRingRunnable)
         handler.postDelayed(maxRingRunnable, MAX_RING_WINDOW_MS)
 
@@ -64,16 +60,19 @@ internal object CallAlertController {
         return true
     }
 
+    @Synchronized
     fun stop(source: CallAlertSource, key: String = source.name) {
         activeTokens.remove("${source.name}:$key")
         if (activeTokens.isEmpty()) resetLoop()
     }
 
+    @Synchronized
     fun stopSource(source: CallAlertSource) {
         activeTokens.removeAll { it.startsWith("${source.name}:") }
         if (activeTokens.isEmpty()) resetLoop()
     }
 
+    @Synchronized
     fun stopAll() {
         activeTokens.clear()
         resetLoop()
@@ -86,19 +85,20 @@ internal object CallAlertController {
         val now = System.currentTimeMillis()
         if (!policy.shouldBuzz(true, buzzCount, lastBuzzAtMs, now)) return
 
-        // Do not consume a call-alert slot while the strap is temporarily disconnected. The
-        // existing connection service can recover the BLE link, and the next policy tick will
-        // retry the same call instead of silently losing the alert.
-        if (!deliveryAllowed(context)) {
-            scheduleNext()
-            return
-        }
-
         val ble = (context.applicationContext as? NoopApplication)?.ble ?: run {
             scheduleNext()
             return
         }
 
+        // A live-HR shortcut can report `bonded` without having the encrypted WHOOP command link.
+        // Haptics require the genuine encrypted bond, otherwise the command is silently lost.
+        if (!deliveryAllowed(context, ble)) {
+            scheduleNext()
+            return
+        }
+
+        // Keep all hardware-specific haptic encoding inside WhoopBleClient.buzz(). The call layer
+        // must never duplicate WHOOP 4 vs 5/MG opcodes or packet framing.
         ble.buzz(NotifPrefs.callLoops(context))
         buzzCount += 1
         lastBuzzAtMs = now
@@ -139,16 +139,16 @@ internal object CallAlertController {
         }
     }
 
-    private fun deliveryAllowed(context: Context): Boolean {
+    private fun deliveryAllowed(
+        context: Context,
+        ble: com.noop.ble.WhoopBleClient,
+    ): Boolean {
         if (!NotifPrefs.getBool(context, NotifPrefs.MASTER, false)) return false
         if (!NotifPrefs.getBool(context, NotifPrefs.CALLS_MASTER, false)) return false
         if (NotifPrefs.inQuietHours(context)) return false
 
-        val ble = (context.applicationContext as? NoopApplication)?.ble ?: return false
         val state = ble.state.value
-        // `bonded` can remain true after a transient GATT disconnect. A haptic command sent in
-        // that window would be lost but would still count as a buzz, so require an active link.
-        if (!state.connected || !state.bonded) return false
+        if (!state.connected || !state.encryptedBond) return false
         if (NotifPrefs.getBool(context, NotifPrefs.WORN, true) && !state.worn) return false
         return true
     }
