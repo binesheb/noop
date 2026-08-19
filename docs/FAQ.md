@@ -6,6 +6,16 @@ Answers to the questions that come up most often in issues. If your question isn
 
 ---
 
+## How can I tell whether my strap is charging?
+
+When NOOP has a live battery reading from the strap, the battery UI also exposes its charging state.
+A charging indicator is shown when the strap reports that it is charging, and the battery data source
+identifies the state as **Charging** rather than treating the battery percentage alone as proof.
+
+If the percentage is visible but the charging indicator does not appear, check the strap connection and
+allow NOOP to refresh its battery reading. A battery percentage by itself does not tell you whether the
+strap is actively receiving charge.
+
 ## Why is NOOP's resting heart rate lower than the WHOOP app's?
 
 **Because they are different statistics over the same night, and the gap is expected.**
