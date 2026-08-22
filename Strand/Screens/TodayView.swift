@@ -224,6 +224,13 @@ struct TodayView: View {
     // Editable Key-Metrics layout (#251), an ordered list of the enabled tiles, persisted display-only.
     // Empty/unset shows the full default order. Every edit affordance routes into one customization sheet.
     @AppStorage(KeyMetricPrefs.layoutKey) private var keyMetricsRaw = ""
+    // #1512: the strap family behind the steps-calibration prompt. Read through @AppStorage rather
+    // than `WhoopModel.persisted` because `stepsPipelineActive` is evaluated inside `keyMetricTile`, once
+    // per metric per body pass, and this body recomposes with live heart rate — that made it a
+    // UserDefaults lookup on a ~1 Hz path. Android memoises the analogous preference reads on this same
+    // body for the same reason. Also makes the value observed, so a strap-model change re-renders the
+    // tile rather than waiting on an unrelated recomposition.
+    @AppStorage("selectedWhoopModel") private var selectedWhoopModelRaw = ""
     @AppStorage("today.keyMetricsDetailed") private var keyMetricsDetailed = false
     @AppStorage("today.keyMetricsWindowDays") private var keyMetricsWindowDays = 14
     private var enabledKeyMetrics: [KeyMetric] { KeyMetricPrefs.decodeEnabled(keyMetricsRaw) }
@@ -3606,10 +3613,13 @@ struct TodayView: View {
             // H6, only an ESTIMATED day (no real strap/phone count, so the on-device estimate filled in)
             // gets the calibration entry; a real measured count needs no calibration.
             let isEstimated = realSteps == nil && estSteps != nil
-            // #589, when the tile would be BLANK on a strap that estimates steps (WHOOP 4.0: the steps
-            // pipeline has run, so there's calibration state recorded) explain WHY rather than a bare ", ",
-            // and still expose the ⚙︎ so the user can reach the sheet to set a manual coefficient.
-            let needsCalibration = realSteps == nil && estSteps == nil && stepsPipelineActive
+            // #589, when the tile would be BLANK on a strap that estimates steps (a WHOOP 4.0 sends no
+            // step count) explain WHY rather than a bare "—", and still expose the ⚙︎ so the user can reach
+            // the sheet to set a manual coefficient. #1491: this used to require calibration state to
+            // already exist, which excluded every 4.0 owner who had not calibrated yet — see
+            // `stepsPipelineActive`.
+            let needsCalibration = realSteps == nil && estSteps == nil
+                && stepsPipelineActive(hasDayData: d != nil)
             StatTile(
                 label: "Steps",
                 value: realSteps ?? estSteps.map { intString(Double($0)) } ?? "—",
@@ -3863,13 +3873,40 @@ struct TodayView: View {
             .help(label)
     }
 
-    /// #589, true once the WHOOP-4.0 steps-ESTIMATE pipeline has run for this user, i.e. the
-    /// IntelligenceEngine has mirrored some calibration state into the profile (a fitted/manual
-    /// coefficient, OR a recorded count of overlapping phone-counted days while still gathering).
-    /// Gates the "needs calibration" affordance so a user whose strap reports real steps (5/MG) or who
-    /// has no strap at all never sees a steps-calibration prompt on a blank tile.
-    private var stepsPipelineActive: Bool {
-        profile.stepsCalibrationCoefficient > 0
+    /// #589, true when the WHOOP-4.0 steps-ESTIMATE pipeline applies to this user. Gates the "needs
+    /// calibration" affordance so a user whose strap reports real steps (5/MG) or who has no strap at all
+    /// never sees a steps-calibration prompt on a blank tile.
+    ///
+    /// #1491: the three profile fields below are all OUTPUTS of calibration — a fitted coefficient, a
+    /// manual one, or a count of overlapping phone-counted days. Testing only those made the affordance
+    /// unreachable for the exact user it was written for: a fresh 4.0 owner with no phone step history has
+    /// all three at zero, so the tile went blank with no explanation and no way through to the sheet that
+    /// would let them set a coefficient by hand. The prompt was gated on evidence that only exists once
+    /// the thing it is prompting for has already started.
+    ///
+    /// The strap itself answers the question that gate was reaching for — a 4.0 sends no step count, so it
+    /// always estimates — and it answers it on day one. The calibration state it is OR-ed with is
+    /// profile-global rather than per-strap, so both halves are measuring the same user either way.
+    ///
+    /// Read off the persisted selection rather than through `BLEManager.isWhoop4`: `TodayView` holds no
+    /// `AppModel`, and `BLEManager` writes this same key whenever the model changes
+    /// (`BLEManager.persistSelectedModel`), so the stored value is the same answer without the dependency.
+    ///
+    /// The family term requires the key to have actually been SET. It is written by
+    /// `BLEManager.persistSelectedModel` the moment a strap is identified, so every real 4.0 owner has one
+    /// and #1491's intent is untouched — what it excludes is the user who has never paired anything, whose
+    /// unset key used to read as a 4.0 through the default and earn them a prompt to calibrate a strap
+    /// nobody has seen. Android's twin has always required the key (`?: return null` in
+    /// `stepsCalibrationPrompt`); this is the Apple side matching it — the two halves of #1512 disagreed
+    /// about the unset case from the day it landed.
+    ///
+    /// [hasDayData] stays as the second guard: it is what keeps the prompt off a date with nothing scored
+    /// on it, which is a different question from whether a strap is known.
+    private func stepsPipelineActive(hasDayData: Bool) -> Bool {
+        // Optional-chained deliberately: an unset (or unparseable) key is NOT a 4.0. The key only ever
+        // holds a `WhoopModel` rawValue, so nil here means "no strap has been identified", not "4.0".
+        (WhoopModel(rawValue: selectedWhoopModelRaw)?.deviceFamily == .whoop4 && hasDayData)
+            || profile.stepsCalibrationCoefficient > 0
             || profile.stepsManualCoefficient > 0
             || profile.stepsCalibrationSampleDays > 0
     }
@@ -3877,7 +3914,18 @@ struct TodayView: View {
     /// #589, the honest one-liner for a blank, not-yet-calibrated Steps tile: how many more days the
     /// phone also has to count steps before an estimate appears. Built from the SAME engine descriptor
     /// Settings uses (`StepsEstimateEngine.CalibrationStatus`) so the wording matches across surfaces.
-    private var stepsCalibrationCaption: String {
+    /// nil once a coefficient exists, because the headline's countdown is `max(0, need - have)` and a
+    /// calibrated user is already past `need` — so this said "Need 0 more days where your phone also
+    /// counted steps" on any day the estimate came out blank. That is a quiet day below the engine's
+    /// motion floor, not a missing input: the fit exists, that day simply did not move enough to earn a
+    /// number, and there is nothing for the user to go and do. `StatTile.caption` is optional, so nil
+    /// renders NO caption rather than falling back to "today" — which would be its own small lie on a past
+    /// day being browsed.
+    /// Twin of the Kotlin `stepsCalibrationPrompt` guard (#1514).
+    private var stepsCalibrationCaption: String? {
+        guard profile.stepsCalibrationCoefficient <= 0, profile.stepsManualCoefficient <= 0 else {
+            return nil
+        }
         let status = StepsEstimateEngine.CalibrationStatus.needsMoreDays(
             have: profile.stepsCalibrationSampleDays,
             need: StepsEstimateEngine.minCalibrationDays)
