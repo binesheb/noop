@@ -14,11 +14,26 @@ NOOP's watchOS charger feedback is intentionally small and state-based.
 
 This keeps an already-charging watch from vibrating when NOOP launches and avoids duplicate feedback when watchOS reports the same state more than once.
 
+## Transition matrix
+
+| Previous state | Current state | Haptic |
+|---|---|---|
+| unknown | any | none |
+| disconnected | connected | success |
+| connected | disconnected | stop |
+| disconnected | disconnected | none |
+| connected | connected | none |
+| unknown | unknown | none |
+| connected/disconnected | unknown | none |
+| unknown | connected/disconnected | none |
+
+`.charging` and `.full` both normalize to `connected`; `.unplugged` normalizes to `disconnected`. Unknown values are deliberately non-actionable, so a temporary or future watchOS battery state cannot accidentally trigger feedback.
+
 ## Implementation boundary
 
 `WatchChargerHapticPolicy` contains the pure transition decision. It has no WatchKit dependency, so the state machine can be reasoned about independently from the device observer.
 
-`WatchChargerHaptics` owns the `WKInterfaceDevice` observer, enables battery monitoring, seeds the initial state, and maps the policy result to WatchKit haptics.
+`WatchChargerHaptics` owns the `WKInterfaceDevice` observer, enables battery monitoring, seeds the initial state, and maps the policy result to WatchKit haptics. Battery monitoring is disabled during teardown so the observer and device lifecycle are symmetric.
 
 The observer is retained by the watch app for its lifetime.
 
