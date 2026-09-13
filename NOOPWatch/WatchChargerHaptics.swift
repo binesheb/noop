@@ -19,6 +19,7 @@ final class WatchChargerHaptics {
         if let observer {
             NotificationCenter.default.removeObserver(observer)
         }
+        device.isBatteryMonitoringEnabled = false
     }
 
     private func start() {
