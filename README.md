@@ -5,42 +5,41 @@
 <h1 align="center">NOOP</h1>
 
 <p align="center"><b>Your strap. Your data. Your machine.</b></p>
-<p align="center"><sub>Offline-first, local, transparent and account-free.</sub></p>
+<p align="center"><sub>Offline-first · local · transparent · account-free</sub></p>
 
 <p align="center">
-  <img alt="Platforms" src="https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Android%20%C2%B7%20iOS-E8B84B?style=flat-square">
-  <img alt="Local first" src="https://img.shields.io/badge/local-first-E8B84B?style=flat-square">
-  <img alt="Account free" src="https://img.shields.io/badge/account-free-C8902F?style=flat-square">
-  <img alt="WHOOP 4 and 5" src="https://img.shields.io/badge/works%20with-WHOOP%204.0%20%26%205.0-6B737B?style=flat-square">
+  <img alt="Platforms" src="https://img.shields.io/badge/macOS%20%C2%B7%20iOS%20%C2%B7%20Android%20%C2%B7%20watchOS-E8B84B?style=flat-square">
+  <img alt="Local first" src="https://img.shields.io/badge/local--first-E8B84B?style=flat-square">
+  <img alt="Account free" src="https://img.shields.io/badge/account--free-C8902F?style=flat-square">
   <a href="LICENSE"><img alt="License: PolyForm Noncommercial 1.0.0" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-6B737B?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/binesheb/noop/releases/latest">Releases</a> ·
-  <a href="https://github.com/binesheb/noop/wiki/FAQ">FAQ</a> ·
+  <a href="https://github.com/binesheb/noop/releases">Releases</a> ·
   <a href="https://github.com/binesheb/noop/issues">Issues</a> ·
   <a href="https://github.com/binesheb/noop/discussions">Discussions</a> ·
-  <a href="docs/PROTOCOL.md">Protocol</a>
+  <a href="docs/PROTOCOL.md">Protocol</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 <p align="center">
-  <img src="docs/assets/hero-v8.jpg" alt="NOOP on iPhone, Mac and Android" width="820">
+  <img src="docs/assets/hero-v8.jpg" alt="NOOP on Apple and Android devices" width="820">
 </p>
 
 ---
 
 ## What is NOOP?
 
-NOOP is an independent, source-available companion for **WHOOP 4.0 and 5.0** hardware.
-It communicates directly with hardware you own, stores the resulting data on your own device,
-and performs analysis locally instead of depending on a WHOOP account or WHOOP cloud service.
+NOOP is an independent, source-available companion for wearable hardware, with **WHOOP 4.0 and 5.0**
+as the primary supported ecosystem.
 
-The project is built around a simple principle:
+It communicates directly with hardware you own, keeps your data on your own devices, and performs
+analysis locally instead of requiring a vendor account or cloud analytics service.
 
 > **Your hardware. Your biometric data. Your machine.**
 
-NOOP is not a replacement for a medical device, and its derived metrics are not clinical measurements.
-It is an experimental interoperability and personal-data project.
+NOOP is an experimental interoperability, personal-data and wellness-visualization project. It is **not
+a medical device** and its derived metrics are not clinical measurements.
 
 **NOOP is not affiliated with, endorsed by, or connected to WHOOP, Inc.** WHOOP is referenced only to
 identify the hardware and ecosystem with which NOOP interoperates.
@@ -51,139 +50,140 @@ identify the hardware and ecosystem with which NOOP interoperates.
 
 ### Local first
 
-The normal data path stays on the device:
+The intended data path is:
 
 **Wearable → Bluetooth → NOOP → local database → local analysis → local UI**
 
-There is no required account, cloud sync, telemetry service, or remote analytics backend.
+There is no required NOOP account, cloud sync, telemetry service, or remote analytics backend.
 
-### Your history stays useful
+### Keep your history useful
 
-NOOP can import existing data so your historical record does not have to remain locked inside another
-application. Supported import paths include WHOOP CSV exports, Apple Health exports, and nutrition CSVs
-from supported applications.
+NOOP supports importing existing records so your history does not have to remain locked inside another
+application. Import paths include WHOOP CSV exports, Apple Health exports and supported nutrition CSVs.
 
 ### Transparent computation
 
-Derived metrics are implemented in source and documented rather than presented as an opaque score.
-Where appropriate, the project uses established methods such as Task Force HRV conventions, Karvonen
-heart-rate reserve, TRIMP-style training load, Tanaka HRmax estimation, and related sports-science
-methods. These are **approximations**, not reproductions of proprietary WHOOP algorithms.
+Derived metrics live in source code and are documented. Where appropriate, NOOP uses established
+methods such as Task Force HRV conventions, Karvonen heart-rate reserve, TRIMP-style training load and
+Tanaka HRmax estimation.
+
+These methods are approximations and are **not reproductions of proprietary vendor algorithms**.
 
 ### Offline by default
 
-The application does not need the internet for normal wearable communication, storage, analysis,
-visualization, imports, or exports.
-
-The optional **AI Coach** is the exception. It remains off until configured and uses a provider or
-local/self-hosted model selected by the user.
+Normal wearable communication, storage, analysis, visualization, imports and exports do not require the
+internet. The optional AI Coach is the deliberate exception and remains disabled until configured.
 
 ---
 
-## Features
+## Feature map
 
-| Area | Capability |
-|---|---|
-| **Today** | Recovery, strain, sleep, HRV, RHR, SpO₂, respiratory rate, activity and other key metrics in one dashboard. |
-| **Readiness** | Local readiness synthesis using your own baselines, recovery signals and training-load context. |
-| **Live** | Real-time heart-rate and wearable frame data. |
-| **Breathe** | HRV-focused breathing sessions with haptic pacing and pre/post session comparison. |
-| **Intervals** | Hands-free interval timer with haptic transition cues and visual fallback. |
-| **Explore** | Browse individual metrics and their historical trends. |
-| **Compare** | Compare two metrics over a common timeline. |
-| **Insights** | Behavioral and correlation-based insights derived from your own history, including Activity Cost. |
-| **Sleep** | Sleep sessions, stages, hypnograms, efficiency, resting HR and HRV with historical browsing. |
-| **Trends** | Long-range recovery, strain, sleep and biometric trends plus a local one-page PDF report. |
-| **Workouts** | Detected/manual workouts, heart-rate curves, zones, duration, average/max HR and effort. |
-| **Health** | HR, HRV, SpO₂, skin temperature, respiratory rate and related biometrics. |
-| **Stress** | Day-level stress/autonomic-load visualization. |
-| **Mind** | Non-clinical daily mood check-ins correlated with personal recovery, sleep and HRV history. |
-| **Apple Health** | Import and reconcile Apple Health data. |
-| **Data Sources** | WHOOP CSV, Apple Health XML and supported nutrition CSV imports plus live strap status. |
-| **Notifications** | Local notifications and configurable thresholds. |
-| **Automations** | On-device reactions to strap events and live biometrics, including Mac actions and Shortcuts. |
-| **Coach** | Optional AI-assisted questions about your own recent metrics. Supports remote APIs and local/self-hosted models. |
-| **Settings** | Profile, units, preferences, step calibration, What's New and experimental protocol controls. |
+| Area | Capability | Status |
+|---|---|---|
+| **Today** | Recovery, strain, sleep, HRV, RHR, SpO₂, respiratory rate and activity dashboard. | Implemented |
+| **Readiness** | Local readiness synthesis using personal baselines and training context. | Implemented |
+| **Live** | Real-time heart-rate and wearable frame data. | Implemented |
+| **Breathe** | HRV-focused breathing sessions with haptic pacing and comparison. | Implemented |
+| **Intervals** | Hands-free interval timer with haptic transition cues. | Implemented |
+| **Explore / Compare** | Historical metric browsing and two-metric comparison. | Implemented |
+| **Insights** | Behavioral/correlation insights from personal history, including Activity Cost. | Implemented |
+| **Sleep** | Sessions, stages, hypnograms, efficiency, resting HR and HRV. | Implemented |
+| **Trends** | Long-range trends and local one-page PDF reporting. | Implemented |
+| **Workouts** | Detected/manual workouts, HR curves, zones, duration and effort. | Implemented |
+| **Health** | HR, HRV, SpO₂, skin temperature, respiratory rate and related biometrics. | Implemented |
+| **Stress / Mind** | Stress visualization and non-clinical mood check-ins. | Implemented |
+| **Apple Health** | Import and reconcile Apple Health data. | Implemented |
+| **Imports** | WHOOP CSV, Apple Health XML and supported nutrition CSVs. | Implemented |
+| **Notifications** | Local notifications and configurable thresholds. | Implemented |
+| **Automations** | Local reactions to strap events and live biometrics, including Mac actions and Shortcuts. | Implemented |
+| **AI Coach** | Optional questions about personal metrics using remote or local/self-hosted models. | Optional |
+| **Wearable protocols** | WHOOP plus experimental protocol modules for additional hardware. | Active development |
+| **watchOS** | Apple Watch companion, live/workout experiences and hardware interaction. | Experimental |
+
+**Status is deliberately conservative.** A feature is only described as stable when its implementation is
+actually present in the source and applicable tests/build gates have been considered. Platform parity is
+a goal, not a claim that every feature behaves identically everywhere.
 
 ---
 
 ## Wearable interaction
 
-NOOP is more than a dashboard. The strap can become an interaction surface.
+NOOP treats wearable hardware as an interaction surface, not just a sensor.
 
-Current haptic-oriented capabilities include:
+Current haptic-oriented experiences include:
 
-- **Breathe:** haptic breathing cues while HRV is being measured.
-- **Intervals:** haptic work/rest and completion cues for hands-free training.
-- **Automations:** configurable haptic coaching for selected heart-rate and inactivity conditions.
-- **Smart alarm:** support for the strap's own firmware alarm where the hardware/protocol permits it.
+- **Breathe** — haptic breathing cues during HRV sessions.
+- **Intervals** — haptic work/rest and completion cues.
+- **Automations** — configurable haptic coaching for selected conditions.
+- **Smart alarm** — support for the strap's own firmware alarm where the hardware/protocol permits it.
+- **Apple Watch** — experimental watchOS interaction.
 
-### Watch hardware roadmap
+### Charger-state haptics
 
-The project is also being extended toward deeper Apple Watch/watchOS hardware interaction.
-One planned/active feature is **charger-state haptics**: a short vibration when a supported Watch
-charger connection is detected and another when it is disconnected. This feature is being developed
-separately from the stable mainline feature set and will be documented here when merged and verified.
+The watchOS implementation is being extended with charger-state feedback: a short vibration when a
+supported Apple Watch charger connection is detected and another when it is disconnected.
+
+This remains an **experimental feature until the implementation is merged and verified on a real target**.
+watchOS also restricts custom haptics while an app is inactive/backgrounded, so NOOP cannot replace Apple's
+system charging feedback.
 
 ---
 
 ## Platform status
 
-| Platform | Status | Notes |
+| Platform | Status | Current baseline |
 |---|---|---|
-| **macOS** | Reference platform | Full local application, analysis, imports, exports, automations and optional AI Coach. |
-| **Android** | Supported | Full application with local storage, wearable communication, analysis and imports. `minSdk 26` (Android 8+). |
-| **iOS** | Supported | Native iOS application using the shared project architecture and local data model. Build/signing instructions are in `docs/IOS.md`. |
-| **watchOS** | Experimental / active development | Hardware interaction is being developed incrementally. Features are only listed as stable after verification on the target platform. |
+| **macOS** | Reference platform | macOS 13+ |
+| **iOS** | Supported | iOS 17+ |
+| **Android** | Supported | Android 8+ / API 26+ |
+| **watchOS** | Experimental | Companion and hardware features under active development |
 
-Platform parity is a goal, not a claim that every screen or hardware capability is identical on every
-platform. Hardware APIs, background execution and distribution requirements differ between Apple,
-Android and macOS.
+The macOS application is the reference implementation. iOS and Android adapt the same concepts to their
+native APIs, while watchOS is developed as a focused companion experience.
 
 ---
 
-## Data architecture
+## Architecture
 
-At a high level, NOOP follows this architecture:
+NOOP is organized around a local-first pipeline:
 
 ```text
-                         ┌─────────────────────┐
-                         │   WHOOP / Oura      │
-                         │   wearable hardware │
-                         └──────────┬──────────┘
-                                    │ Bluetooth
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Device transport  │
-                         │ protocol / decoder  │
-                         └──────────┬──────────┘
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Local data model  │
-                         │      SQLite/GRDB    │
-                         └──────────┬──────────┘
-                                    ▼
-              ┌────────────────────┴────────────────────┐
-              │                                         │
-              ▼                                         ▼
-   ┌─────────────────────┐                   ┌─────────────────────┐
-   │  Local analyzers    │                   │  Import / reconcile │
-   │ HRV / sleep / load  │                   │ WHOOP / Health /   │
-   │ recovery / trends   │                   │ nutrition history   │
-   └──────────┬──────────┘                   └──────────┬──────────┘
-              └────────────────────┬────────────────────┘
-                                   ▼
-                         ┌─────────────────────┐
-                         │   Local application │
-                         │ UI / reports /      │
-                         │ notifications /     │
-                         │ automations         │
-                         └─────────────────────┘
+                    ┌─────────────────────┐
+                    │   Wearable hardware │
+                    │  WHOOP + experiments│
+                    └──────────┬──────────┘
+                               │ Bluetooth / import
+                               ▼
+                    ┌─────────────────────┐
+                    │ Protocol / transport│
+                    │      decoders       │
+                    └──────────┬──────────┘
+                               ▼
+                    ┌─────────────────────┐
+                    │    Local storage    │
+                    │     SQLite/GRDB     │
+                    └──────────┬──────────┘
+                               ▼
+          ┌────────────────────┴────────────────────┐
+          ▼                                         ▼
+┌─────────────────────┐                   ┌─────────────────────┐
+│   Local analyzers   │                   │ Import / reconcile  │
+│ HRV / sleep / load  │                   │ WHOOP / Health /    │
+│ recovery / trends   │                   │ nutrition history   │
+└──────────┬──────────┘                   └──────────┬──────────┘
+           └────────────────────┬────────────────────┘
+                                ▼
+                    ┌─────────────────────┐
+                    │   Local application │
+                    │ UI / reports /      │
+                    │ notifications /     │
+                    │ automations         │
+                    └─────────────────────┘
 ```
 
-The macOS reference application is organized around `Strand/`, with data, analysis, screens, system
-integration and platform-specific code separated into focused modules. Android and iOS reuse the
-shared concepts while adapting to their native platform APIs.
+The macOS reference application is centered on `Strand/`. Shared Swift packages isolate protocol,
+persistence, analytics, import and design concerns. iOS, Android and watchOS add native platform
+integration around those concepts.
 
 ---
 
@@ -192,101 +192,81 @@ shared concepts while adapting to their native platform APIs.
 ```text
 .
 ├── Strand/                    # macOS reference application
-│   ├── App/                   # application shell and navigation
-│   ├── Data/                  # database, imports and metric catalog
-│   ├── Screens/               # user-facing screens
-│   ├── System/                # notifications, automations and Mac actions
-│   └── MenuBar/               # macOS menu-bar experience
-├── Packages/                  # shared Swift packages and analyzers
+├── StrandiOS/                # iOS application shell and integration
+├── StrandiOSShared/          # shared iOS/widget contracts
+├── NOOPWatch/                # experimental watchOS companion
+├── Packages/                  # shared Swift packages
 ├── android/                   # Android application
-├── docs/                      # protocol, build, privacy and project documentation
+├── docs/                      # build, protocol, privacy and project documentation
 ├── scripts/                   # development/build helpers
 ├── DISCLAIMER.md              # non-medical and project limitations
 ├── ATTRIBUTION.md             # attribution and interoperability sources
-├── NOTICE                     # third-party component notices
+├── CHANGELOG.md               # project history
+├── NOTICE                     # third-party notices
 └── LICENSE                    # PolyForm Noncommercial License 1.0.0
 ```
 
-The exact tree evolves as platform implementations mature; source code is the authoritative reference
-for implementation details.
+The tree evolves with the project. **Source code and tests are the authoritative implementation reference.**
 
 ---
 
-## Quickstart — macOS
+## Build from source
 
-### Requirements
+### macOS
 
-- macOS with a supported Xcode toolchain
-- Swift/Xcode dependencies resolved by the project
-- A compatible wearable for live hardware testing
+Requirements:
 
-### Build
-
-See [`docs/BUILD.md`](docs/BUILD.md) for the maintained build procedure.
-
-A typical source workflow is:
+- macOS 13 or newer
+- A supported Xcode/Swift toolchain
+- Compatible wearable hardware for live testing
 
 ```bash
 git clone https://github.com/binesheb/noop.git
 cd noop
 ```
 
-Then open/generate the appropriate Xcode project as described in `docs/BUILD.md` and build the macOS
-application from Xcode.
+Follow [`docs/BUILD.md`](docs/BUILD.md) for project generation, configuration and build instructions.
 
-For iOS and Android, follow their platform-specific documentation rather than assuming the macOS
-commands apply unchanged.
+### iOS
 
----
+NOOP targets **iOS 17+**. Build and signing instructions are maintained in [`docs/IOS.md`](docs/IOS.md).
 
-## Android
+### Android
 
-Pre-built Android releases are distributed through GitHub Releases when available.
-
-- Minimum SDK: **26 / Android 8+**
-- Distribution may require sideloading because NOOP is not distributed through Google Play.
-- The application is designed around local storage and does not require a WHOOP account.
-
-See [`docs/BUILD.md`](docs/BUILD.md) for source builds and platform details.
+NOOP targets **Android API 26+**. Follow [`docs/BUILD.md`](docs/BUILD.md) for the current source-build
+procedure. Releases, when available, are published through GitHub Releases.
 
 ---
 
-## iOS
+## Privacy and data flow
 
-NOOP can be built from source with Xcode. Release builds may also be distributed as an unsigned IPA
-or through AltStore/SideStore where configured by the project.
-
-See [`docs/IOS.md`](docs/IOS.md) for current installation and signing instructions.
-
----
-
-## Privacy
-
-NOOP's default design is intentionally local:
+NOOP is designed to keep personal data local:
 
 - No required NOOP account.
 - No required WHOOP account.
 - No required cloud database.
 - No routine upload of raw wearable streams.
-- Historical imports remain on the user's device.
-- Analysis is performed locally.
+- Imported history remains on the user's device.
+- Core analysis runs locally.
 - AI Coach is optional and disabled until configured.
-- When a remote AI provider is configured, only the information required by the selected AI feature
-  is sent; raw wearable streams and device identifiers are not required by the normal Coach flow.
+- A configured remote AI provider receives only the information required by the selected AI feature.
 
-For the detailed security and data-flow model, see [`docs/PRIVACY_SECURITY.md`](docs/PRIVACY_SECURITY.md).
+See [`docs/PRIVACY_SECURITY.md`](docs/PRIVACY_SECURITY.md) for the detailed data-flow and security model.
+
+> **Local-first does not mean every optional integration is network-free.** Configure external services
+> only when you understand and accept their data path.
 
 ---
 
 ## Protocol and interoperability
 
-NOOP documents the wearable protocol information used by the project, including packet structure,
-services, characteristics, commands, events and decoding details where known.
+NOOP documents wearable protocol information used by the project, including packet structures, services,
+characteristics, commands, events and decoding details where known.
 
 See [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
 
-Protocol documentation describes factual interoperability information about data appearing on a wire.
-It should not be confused with ownership of the original hardware, firmware or proprietary software.
+Protocol documentation describes factual interoperability information. It does not transfer ownership of
+hardware, firmware or proprietary software.
 
 ---
 
@@ -294,47 +274,34 @@ It should not be confused with ownership of the original hardware, firmware or p
 
 **NOOP is not a medical device.**
 
-Heart rate, HRV, SpO₂, respiratory rate, sleep, stress, recovery and other derived values are for
+Heart rate, HRV, SpO₂, respiratory rate, sleep, stress, recovery and other derived values are intended for
 personal information, experimentation and wellness-oriented visualization. They may be inaccurate,
-incomplete or affected by sensor quality, movement, fit, firmware behavior and algorithmic assumptions.
+incomplete, or affected by sensor quality, movement, fit, firmware behavior and algorithmic assumptions.
 
-Do not use NOOP to diagnose, treat, monitor or rule out a medical condition. Do not rely on it for an
-emergency decision. If you have a health concern, use appropriate medical care and qualified clinical
-advice.
+Do not use NOOP to diagnose, treat, monitor or rule out a medical condition. Do not rely on NOOP for an
+emergency decision. If you have a health concern, use appropriate medical care and qualified clinical advice.
 
 See [`DISCLAIMER.md`](DISCLAIMER.md) for the complete project disclaimer.
 
 ---
 
-## Attribution
+## Attribution and license
 
-NOOP builds on prior community interoperability research and third-party open-source components.
-Their respective licenses and notices remain applicable.
+NOOP builds on prior community interoperability research and third-party open-source components. Their
+respective licenses and notices remain applicable.
 
 See [`ATTRIBUTION.md`](ATTRIBUTION.md) and [`NOTICE`](NOTICE).
 
----
+NOOP's original source code and documentation are licensed under the **PolyForm Noncommercial License
+1.0.0**. Commercial use is not granted by that license.
 
-## License
-
-NOOP's original source code and documentation are licensed under the
-**PolyForm Noncommercial License 1.0.0**.
-
-In practical terms, the project is source-available and intended to be free for personal and other
-permitted non-commercial use. **Commercial use is not granted by this license.**
-
-Protocol facts documented by the project are treated separately as factual interoperability
-information as described in the repository's license and notices.
-
-Read the complete [`LICENSE`](LICENSE) before redistributing or using the project.
+Read [`LICENSE`](LICENSE) before redistributing or using the project.
 
 ---
 
 ## Contributing
 
 Small, focused contributions are preferred.
-
-Before opening a pull request:
 
 1. Start from the latest `main`.
 2. Understand the existing architecture before changing it.
@@ -347,14 +314,16 @@ Before opening a pull request:
 
 For protocol changes, include the evidence and device context used to establish the behavior.
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+
 ---
 
 ## Project direction
 
-NOOP is being developed incrementally. The priority is not to add every possible feature at once,
-but to build a dependable local platform around hardware the user already owns.
+NOOP is being built incrementally around a simple goal: **a dependable local platform for hardware the
+user already owns**.
 
-Current development themes include:
+Current development priorities:
 
 - deeper wearable protocol coverage;
 - stronger local analytics and validation;
@@ -363,11 +332,11 @@ Current development themes include:
 - platform parity across macOS, iOS and Android;
 - experimental watchOS capabilities;
 - deterministic exports and reports;
-- privacy/security hardening;
+- privacy and security hardening;
 - automated testing and build verification;
 - optional local AI integrations.
 
-The repository's source, tests, issues and release notes are the authoritative record of what is
+The repository's **source, tests, issues, changelog and releases** are the authoritative record of what is
 actually implemented.
 
 ---
