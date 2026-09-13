@@ -23,6 +23,9 @@ final class WatchChargerHaptics {
     }
 
     private func start() {
+        // WatchKit batteryState is Unknown until battery monitoring is explicitly enabled.
+        device.isBatteryMonitoringEnabled = true
+
         // Read the state before observing so the initial state can never create a false transition.
         previousState = connection(for: device.batteryState)
 
