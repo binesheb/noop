@@ -12,19 +12,63 @@ import Charts
 // score), but any gradient + value-range can be supplied — pass the blue sleep
 // ramp for sleep, the teal HRV scale for HRV, the amber strain ramp for strain.
 
+/// The index runs that `hrGapSegments` implies: one range per unbroken stretch, in order.
+///
+/// Charts can hand a segment id to the plotting library and let it split the line. A hand-drawn sparkline
+/// cannot, so it needs the runs themselves to know where to lift the pen. Same rule, same source of truth,
+/// rather than a second walk that could disagree with the first (#2082).
+///
+/// An empty input yields no runs. A run of one is still a run: a lone bucket between two gaps is real data
+/// and a caller that drops it would be hiding a reading rather than a gap.
+public func hrGapRuns(segments: [String]) -> [ClosedRange<Int>] {
+    guard !segments.isEmpty else { return [] }
+    var runs: [ClosedRange<Int>] = []
+    var start = 0
+    for i in 1..<segments.count where segments[i] != segments[i - 1] {
+        runs.append(start...(i - 1))
+        start = i
+    }
+    runs.append(start...(segments.count - 1))
+    return runs
+}
+
+/// Segment ids for a bucketed time series, changing wherever the series SKIPS a bucket.
+///
+/// A bucket aggregate only emits rows for buckets that had samples, so an hour the strap was off simply
+/// is not in the list. Without this the line joins the two neighbours across that hour and draws a
+/// steady climb the wearer never had, which is a reading invented out of an absence. Handing these to
+/// `TrendPoint.segment` renders the two sides as separate lines, so a gap looks like a gap.
+///
+/// A step of exactly one bucket is contiguous. Anything longer means at least one bucket held nothing,
+/// and that is the break. No tolerance for "just one missing": a five-minute hole is still five minutes
+/// of invention, and the stress trace made the same call when it stopped drawing through unscored hours.
+///
+/// Byte-identical twin of the Kotlin `hrGapSegmentIds`.
+public func hrGapSegments(bucketTs: [Int], bucketSeconds: Int) -> [String] {
+    var segment = 0
+    return bucketTs.enumerated().map { i, ts in
+        if i > 0, ts - bucketTs[i - 1] > bucketSeconds { segment += 1 }
+        return String(segment)
+    }
+}
+
 /// One point on a trend line.
 public struct TrendPoint: Identifiable, Sendable {
     public var date: Date
     public var value: Double
+    /// Sequential line-segment identity. Points with different ids are rendered as separate lines, so a
+    /// metric can retain history without drawing a false transition across incompatible methods.
+    public var segment: String
 
     /// Stable, content-derived identity (one point per date in a series). A random
     /// `UUID()` defeats Swift Charts' diffing — every render re-identifies all marks
     /// and replays the draw animation; keying on the date lets Charts diff by data.
     public var id: Date { date }
 
-    public init(date: Date, value: Double) {
+    public init(date: Date, value: Double, segment: String = "default") {
         self.date = date
         self.value = value
+        self.segment = segment
     }
 }
 
@@ -41,6 +85,13 @@ public struct TrendChart: View {
     /// filled `BarMark` per (down-sampled) sample. Display-only — the plotted series is identical; only
     /// the mark geometry changes. Default false (the classic line). `showsArea` is ignored in bar mode.
     public var showsBars: Bool
+
+    /// Optional personal-baseline reference, drawn as a dashed rule UNDER the series.
+    ///
+    /// A reference the readings are judged against, not a second series, so it is dashed and faint. Nil
+    /// (the default) draws nothing, and the rule rides the chart's own y domain, so a value outside the
+    /// plotted range simply falls off it rather than being clamped to an edge it does not sit on.
+    public var baselineValue: Double?
     public var height: CGFloat
     /// Whether hovering reveals a crosshair + tooltip for the nearest point.
     public var showsHover: Bool
@@ -75,6 +126,7 @@ public struct TrendChart: View {
         valueRange: ClosedRange<Double> = 0...100,
         showsArea: Bool = true,
         showsBars: Bool = false,
+        baselineValue: Double? = nil,
         height: CGFloat = 220,
         showsHover: Bool = true,
         valueFormat: @escaping (Double) -> String = { String(Int($0.rounded())) },
@@ -89,6 +141,7 @@ public struct TrendChart: View {
         self.valueRange = valueRange
         self.showsArea = showsArea
         self.showsBars = showsBars
+        self.baselineValue = baselineValue
         self.height = height
         self.showsHover = showsHover
         self.valueFormat = valueFormat
@@ -178,6 +231,11 @@ public struct TrendChart: View {
 
     public var body: some View {
         Chart {
+            if let baselineValue {
+                RuleMark(y: .value("Baseline", baselineValue))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .foregroundStyle(.secondary.opacity(0.45))
+            }
             if showsBars {
                 // Bar mode: one value-ramp-filled BarMark per (down-sampled) sample, from the baseline.
                 // The line, area and point marks are all replaced. The same `displayPoints` feed it, so a
@@ -195,7 +253,8 @@ public struct TrendChart: View {
                     ForEach(displayPoints) { p in
                         AreaMark(
                             x: .value("Date", p.date),
-                            y: .value("Value", p.value)
+                            y: .value("Value", p.value),
+                            series: .value("Segment", p.segment)
                         )
                         .interpolationMethod(.catmullRom)
                         .foregroundStyle(
@@ -212,7 +271,8 @@ public struct TrendChart: View {
                 ForEach(displayPoints) { p in
                     LineMark(
                         x: .value("Date", p.date),
-                        y: .value("Value", p.value)
+                        y: .value("Value", p.value),
+                        series: .value("Segment", p.segment)
                     )
                     .interpolationMethod(.catmullRom)
                     .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))

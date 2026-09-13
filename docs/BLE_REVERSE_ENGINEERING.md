@@ -312,9 +312,17 @@ stream off, NOOP's primary metric source becomes the **historical offload** (nex
 ### On-demand raw capture
 
 For research, raw IMU can be captured for a bounded window with `captureRawAccel(seconds:)`, which
-sends `START_RAW_DATA` (81) + `TOGGLE_IMU_MODE` (106), records for the window, then re-issues
-`STOP_RAW_DATA` and disables the stream again. This is opt-in only; the global research toggle
-(`enableRawCapture`) defaults **off** and the app is decoded-only otherwise.
+sends `START_RAW_DATA` (81) followed by `TOGGLE_IMU_MODE` (106), records for the window, then
+re-issues `STOP_RAW_DATA` and disables the stream again. This ordering is hardware-verified on a
+WHOOP 5/MG: opcode 106 alone returns an acknowledgement but does **not** start the producer. The 5/MG
+selector is two bytes (`[0x01, 0x01]` on, `[0x01, 0x00]` off); retaining the older one-byte form here
+was why an apparently successful capture contained no realtime IMU packets.
+
+The manually stopped Raw Data Collector uses the same sequence and accepts delayed historical IMU
+buffers into the session by strap timestamp, so a later offload can repair a Bluetooth gap. This is
+opt-in and bounded; the global research toggle (`enableRawCapture`) defaults **off** and the app is
+decoded-only otherwise. Storage/export details and consumer ordering rules are in
+[5/MG raw data capture](RAW_DATA_CAPTURE.md).
 
 ---
 
@@ -427,7 +435,7 @@ garbage (HR `0`, gravity overflow). The fields below were read off real frames a
 | 15 | `unix` (u32) | monotonic, +1 s |
 | 22 | `heart_rate` (u8) | **matched the 2A37-verified live HR exactly at all 96 overlapping timestamps** (mean \|Δ\| 0.00 bpm); note this is v24's `21`+1, **not** +4 |
 | 23 | `rr_count` (u8) | matches #valid R-R intervals 100 % (1141/1143) |
-| 24 + 2·i | `rr[i]` (u16, ms) | 60000/mean(R-R) ≈ HR for 88 % (rest are HR-averaging) |
+| 24 + 2·i | `rr[i]` (u16, 1/1024 s ticks) | WHOOP 5 firmware `50.41.1.0`: paired standard-BLE R-R confirms `ms = (ticks * 1000 + 512) / 1024` (integer rounding). Raw native payload words remain ticks; decoded intervals use ms. WHOOP 4 units are unchanged. |
 | 36 | `hr_quality_flags` (u8) | a **flag byte**, *not* the low half of a fixed-point HR. Over **18,650** real v18 records bit 4 is **never** set (0/18,650 — a genuine 8.8 fraction sets it ~50 % of the time, and it is the only bit never set), **95.02 %** of values land in `0x80`–`0x8F` (uniform would be 6.25 %) across just **40 distinct values**, and sd = **26.5** vs 73.9 for a uniform byte. **Bit 7 = validity**: with it clear (n=748) `rr_count == 0` in **70.32 %** of records vs **19.82 %** with it set, and the `@108/@109` sentinel fires in **69.65 %** vs 1.32 %. Remaining bits unpinned; carried raw. |
 | 37 | `heart_rate_alt` (u8, bpm) | a **duplicate** of `heart_rate@22` — equal in **99.575 %** of records (18,523/18,602), differing only by −6…+2, and it tracks HR only while `@36` bit 7 is set (99.74 % exact vs 94.12 % when clear). |
 | ~~36–37~~ | ~~`hr_fixed_8_8` (u16 LE) — bpm = `value/256`~~ | **Retired.** The "corr 0.989 with `heart_rate@22`" that justified this name was **circular**: the u16 is literally `hr@22` (at `@37`) plus the `@36` flag byte over 256, so the residual is a flat **+0.504 ± 0.189** — i.e. `@36/256`, not a sub-bpm fraction. On records where `@36` bit 7 is clear it produced absurd readings (a fixture decodes to **227 bpm**). |
@@ -930,9 +938,11 @@ anything, it plausibly gates *those streams* rather than the offload.
 Our exposure to that is limited but not zero, and worth stating precisely. NOOP takes live HR from the
 standard `0x2A37` profile and disables the R10/R11 flood on connect (§4), and it never sends
 `TOGGLE_OPTICAL_MODE` (108) at all. But `captureRawAccel` **does** send `START_RAW_DATA` (81) +
-`TOGGLE_IMU_MODE` (106) — on demand, for a bounded window, never continuously. So the one place this
-could bite is an on-demand raw-accel capture on a 5/MG. Whether that path yields IMU frames today is
-the observation that would settle the narrow claim, and it is not recorded anywhere here.
+`TOGGLE_IMU_MODE` (106) — on demand, for a bounded window, never continuously. That path is now
+hardware-verified to yield decoded 100 Hz six-axis IMU after the two-byte 5/MG selector is used.
+It works without implementing a `LINK_VALID` response, so the proposed handshake is not required for
+this raw-IMU producer on the tested strap/firmware. This does not prove that every firmware treats
+`LINK_VALID` identically or that ignoring it can never affect link stability.
 
 **Two questions are genuinely open**, and a capture answers both without implementing anything:
 
