@@ -2,6 +2,7 @@ package com.noop.analytics
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class RhythmShareTest {
@@ -37,5 +38,37 @@ class RhythmShareTest {
         )
         val artifact = RhythmShare.artifact(summary, emptyList(), "night-2026-09-13.csv")
         assertEquals("night-2026-09-13.csv", artifact.filename)
+    }
+
+    @Test
+    fun shareArtifactRejectsInvalidMetadata() {
+        val disclaimer = "# NOOP Rhythm export\n"
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RhythmShareArtifact(
+                filename = "night.txt",
+                mimeType = "text/csv",
+                chooserTitle = "Share NOOP Rhythm export",
+                text = disclaimer,
+            )
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RhythmShareArtifact(
+                filename = "night.csv",
+                mimeType = "text/plain",
+                chooserTitle = "Share NOOP Rhythm export",
+                text = disclaimer,
+            )
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RhythmShareArtifact(
+                filename = "night.csv",
+                mimeType = "text/csv",
+                chooserTitle = "Share NOOP Rhythm export",
+                text = "metric,value\n",
+            )
+        }
     }
 }
