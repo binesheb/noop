@@ -39,6 +39,9 @@ public enum RhythmExport {
 
     private static func num(_ x: Double?) -> String {
         guard let x else { return "" }
-        return String(format: "%.3f", (x * 1000).rounded() / 1000)
+        // CSV is a machine-readable interchange format: never let the user's locale
+        // turn the decimal separator into a comma and corrupt the column structure.
+        return String(format: "%.3f", locale: Locale(identifier: "en_US_POSIX"),
+                      (x * 1000).rounded() / 1000)
     }
 }
