@@ -17,6 +17,13 @@ public struct MiBandGenerationSignatureRegistry: Equatable, Sendable {
             return nil
         }
 
-        self.signatures = signatures
+        self.signatures = zip(signatures, identifiers).map { signature, identifier in
+            MiBandGenerationSignature(
+                identifier: identifier,
+                requiredServiceUUIDs: signature.requiredServiceUUIDs,
+                requiredCharacteristicUUIDs: signature.requiredCharacteristicUUIDs,
+                capabilities: signature.capabilities
+            )
+        }
     }
 }
