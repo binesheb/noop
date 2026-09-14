@@ -91,13 +91,23 @@ public enum MiBandDiscoveryModel {
             return MiBandDiscoveryAssessment(result: .unknown, capabilities: [], reason: "insufficient GATT evidence")
         }
 
-        if let signature = signatures.first(where: {
+        let matchingSignatures = signatures.filter {
             $0.matches(serviceUUIDs: serviceUUIDs, characteristicUUIDs: characteristicUUIDs)
-        }) {
+        }
+
+        if matchingSignatures.count == 1, let signature = matchingSignatures.first {
             return MiBandDiscoveryAssessment(
                 result: .supported,
                 capabilities: [.bleDiscovery, .modelIdentification, .serviceInventory].union(signature.capabilities),
                 reason: "verified generation signature: \(signature.identifier)"
+            )
+        }
+
+        if matchingSignatures.count > 1 {
+            return MiBandDiscoveryAssessment(
+                result: .recognizedButUnsupported,
+                capabilities: serviceUUIDs.isEmpty ? [.bleDiscovery] : [.bleDiscovery, .serviceInventory],
+                reason: "multiple verified generation signatures match"
             )
         }
 
