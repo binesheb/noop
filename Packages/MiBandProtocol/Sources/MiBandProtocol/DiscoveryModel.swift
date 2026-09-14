@@ -64,7 +64,11 @@ public struct MiBandGenerationSignature: Equatable, Sendable {
     fileprivate func matches(serviceUUIDs: Set<String>, characteristicUUIDs: Set<String>) -> Bool {
         let requiredServices = normalized(requiredServiceUUIDs)
         let requiredCharacteristics = normalized(requiredCharacteristicUUIDs)
+        let normalizedIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        guard !normalizedIdentifier.isEmpty else {
+            return false
+        }
         guard !requiredServices.isEmpty || !requiredCharacteristics.isEmpty else {
             return false
         }
