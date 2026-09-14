@@ -61,17 +61,20 @@ public struct MiBandGenerationSignature: Equatable, Sendable {
         self.capabilities = capabilities
     }
 
+    /// Whether the signature has enough identifying data to participate in matching.
+    public var isWellFormed: Bool {
+        let normalizedIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !normalizedIdentifier.isEmpty &&
+            (!normalized(requiredServiceUUIDs).isEmpty || !normalized(requiredCharacteristicUUIDs).isEmpty)
+    }
+
     fileprivate func matches(serviceUUIDs: Set<String>, characteristicUUIDs: Set<String>) -> Bool {
+        guard isWellFormed else {
+            return false
+        }
+
         let requiredServices = normalized(requiredServiceUUIDs)
         let requiredCharacteristics = normalized(requiredCharacteristicUUIDs)
-        let normalizedIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !normalizedIdentifier.isEmpty else {
-            return false
-        }
-        guard !requiredServices.isEmpty || !requiredCharacteristics.isEmpty else {
-            return false
-        }
 
         return requiredServices.isSubset(of: normalized(serviceUUIDs)) &&
             requiredCharacteristics.isSubset(of: normalized(characteristicUUIDs))
