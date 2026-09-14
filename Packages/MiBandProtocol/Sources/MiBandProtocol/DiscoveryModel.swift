@@ -45,14 +45,17 @@ public struct MiBandDiscoveryAssessment: Equatable, Sendable {
 public enum MiBandDiscoveryModel {
     /// Conservative first-stage assessment. No model is inferred from a name alone.
     public static func assess(_ evidence: MiBandDiscoveryEvidence) -> MiBandDiscoveryAssessment {
-        guard !evidence.serviceUUIDs.isEmpty || !evidence.characteristicUUIDs.isEmpty else {
+        let serviceUUIDs = evidence.serviceUUIDs.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let characteristicUUIDs = evidence.characteristicUUIDs.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+        guard !serviceUUIDs.isEmpty || !characteristicUUIDs.isEmpty else {
             return MiBandDiscoveryAssessment(result: .unknown, capabilities: [], reason: "insufficient GATT evidence")
         }
 
         // Until a generation-specific signature is verified, do not claim support
         // or grant metric capabilities from incomplete protocol evidence.
         var capabilities: Set<MiBandCapability> = [.bleDiscovery]
-        if !evidence.serviceUUIDs.isEmpty {
+        if !serviceUUIDs.isEmpty {
             capabilities.insert(.serviceInventory)
         }
 
