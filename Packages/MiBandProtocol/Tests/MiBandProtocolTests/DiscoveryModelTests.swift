@@ -33,6 +33,16 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertFalse(result.capabilities.contains(.activityHistory))
     }
 
+    func testCharacteristicEvidenceAloneDoesNotClaimServiceInventory() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(characteristicUUIDs: ["2A37"])
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery])
+        XCTAssertFalse(result.capabilities.contains(.serviceInventory))
+    }
+
     func testDuplicateGattEntriesDoNotChangeAssessment() {
         let single = MiBandDiscoveryModel.assess(
             .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["2A37"])
