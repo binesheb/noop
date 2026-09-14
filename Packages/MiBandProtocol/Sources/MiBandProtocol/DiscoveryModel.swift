@@ -62,8 +62,8 @@ public struct MiBandGenerationSignature: Equatable, Sendable {
     }
 
     fileprivate func matches(serviceUUIDs: Set<String>, characteristicUUIDs: Set<String>) -> Bool {
-        requiredServiceUUIDs.isSubset(of: serviceUUIDs) &&
-            requiredCharacteristicUUIDs.isSubset(of: characteristicUUIDs)
+        normalized(requiredServiceUUIDs).isSubset(of: normalized(serviceUUIDs)) &&
+            normalized(requiredCharacteristicUUIDs).isSubset(of: normalized(characteristicUUIDs))
     }
 }
 
@@ -73,8 +73,8 @@ public enum MiBandDiscoveryModel {
         _ evidence: MiBandDiscoveryEvidence,
         signatures: [MiBandGenerationSignature] = []
     ) -> MiBandDiscoveryAssessment {
-        let serviceUUIDs = evidence.serviceUUIDs.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        let characteristicUUIDs = evidence.characteristicUUIDs.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let serviceUUIDs = normalized(evidence.serviceUUIDs)
+        let characteristicUUIDs = normalized(evidence.characteristicUUIDs)
 
         guard !serviceUUIDs.isEmpty || !characteristicUUIDs.isEmpty else {
             return MiBandDiscoveryAssessment(result: .unknown, capabilities: [], reason: "insufficient GATT evidence")
@@ -102,5 +102,12 @@ public enum MiBandDiscoveryModel {
             capabilities: capabilities,
             reason: "Mi Band generation signature is not yet verified"
         )
+    }
+
+    private static func normalized(_ values: Set<String>) -> Set<String> {
+        Set(values.compactMap { value in
+            let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return normalized.isEmpty ? nil : normalized
+        })
     }
 }
