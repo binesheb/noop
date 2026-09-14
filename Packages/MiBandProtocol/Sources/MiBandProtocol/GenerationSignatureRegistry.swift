@@ -26,4 +26,17 @@ public struct MiBandGenerationSignatureRegistry: Equatable, Sendable {
             )
         }
     }
+
+    /// Returns a registered signature by its canonical identifier.
+    ///
+    /// Lookup normalizes surrounding whitespace so callers do not need to duplicate
+    /// the registry's identifier normalization rules.
+    public func signature(forIdentifier identifier: String) -> MiBandGenerationSignature? {
+        let normalizedIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedIdentifier.isEmpty else {
+            return nil
+        }
+
+        return signatures.first { $0.identifier == normalizedIdentifier }
+    }
 }
