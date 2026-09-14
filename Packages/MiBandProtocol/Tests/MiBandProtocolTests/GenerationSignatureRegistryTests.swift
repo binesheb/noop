@@ -42,4 +42,28 @@ final class GenerationSignatureRegistryTests: XCTestCase {
 
         XCTAssertNil(MiBandGenerationSignatureRegistry(signatures: [first, second]))
     }
+
+    func testRegistryLookupNormalizesIdentifierWhitespace() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["180D"]
+        )
+        let registry = MiBandGenerationSignatureRegistry(signatures: [signature])
+
+        XCTAssertEqual(
+            registry?.signature(forIdentifier: "  fixture-generation  "),
+            signature
+        )
+    }
+
+    func testRegistryLookupReturnsNilForBlankOrUnknownIdentifier() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["180D"]
+        )
+        let registry = MiBandGenerationSignatureRegistry(signatures: [signature])
+
+        XCTAssertNil(registry?.signature(forIdentifier: "   "))
+        XCTAssertNil(registry?.signature(forIdentifier: "other"))
+    }
 }
