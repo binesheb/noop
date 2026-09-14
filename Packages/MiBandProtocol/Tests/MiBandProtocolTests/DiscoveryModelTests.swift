@@ -9,6 +9,18 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertTrue(result.capabilities.isEmpty)
     }
 
+    func testWhitespaceOnlyGattEvidenceFailsClosedAsUnknown() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(
+                serviceUUIDs: ["  "],
+                characteristicUUIDs: ["\n"]
+            )
+        )
+
+        XCTAssertEqual(result.result, .unknown)
+        XCTAssertTrue(result.capabilities.isEmpty)
+    }
+
     func testLocalNameAloneDoesNotIdentifyAMiBand() {
         let result = MiBandDiscoveryModel.assess(
             .init(localName: "Mi Smart Band")
