@@ -169,4 +169,11 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(result.reason, "multiple verified generation signatures match")
         XCTAssertFalse(result.capabilities.contains(.modelIdentification))
     }
+
+    func testGenerationSignatureValidationRejectsBlankOrEmptyDefinitions() {
+        XCTAssertFalse(MiBandGenerationSignature(identifier: " \n", requiredServiceUUIDs: ["180D"]).isWellFormed)
+        XCTAssertFalse(MiBandGenerationSignature(identifier: "fixture").isWellFormed)
+        XCTAssertFalse(MiBandGenerationSignature(identifier: "fixture", requiredServiceUUIDs: [" \n"]).isWellFormed)
+        XCTAssertTrue(MiBandGenerationSignature(identifier: "fixture", requiredServiceUUIDs: ["180D"]).isWellFormed)
+    }
 }
