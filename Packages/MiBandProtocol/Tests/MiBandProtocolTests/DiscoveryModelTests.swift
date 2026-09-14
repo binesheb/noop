@@ -87,6 +87,25 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(result.reason, "verified generation signature: fixture-generation")
     }
 
+    func testRegistryAssessmentUsesOnlyValidatedSignatures() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
+        )
+        let registry = MiBandGenerationSignatureRegistry(signatures: [signature])!
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"], characteristicUUIDs: ["1234"]),
+            registry: registry
+        )
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .modelIdentification, .serviceInventory, .battery])
+        XCTAssertEqual(result.reason, "verified generation signature: fixture-generation")
+    }
+
     func testSignatureRequiresAllDeclaredGattEvidence() {
         let signature = MiBandGenerationSignature(
             identifier: "fixture-generation",
