@@ -65,4 +65,38 @@ final class DiscoveryModelTests: XCTestCase {
 
         XCTAssertEqual(single, duplicate)
     }
+
+    func testVerifiedSignatureProducesSupportedAssessment() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"], characteristicUUIDs: ["1234"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .modelIdentification, .serviceInventory, .battery])
+        XCTAssertEqual(result.reason, "verified generation signature: fixture-generation")
+    }
+
+    func testSignatureRequiresAllDeclaredGattEvidence() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+    }
 }
