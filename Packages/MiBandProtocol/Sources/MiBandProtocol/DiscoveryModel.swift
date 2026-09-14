@@ -51,9 +51,14 @@ public enum MiBandDiscoveryModel {
 
         // Until a generation-specific signature is verified, do not claim support
         // or grant metric capabilities from incomplete protocol evidence.
+        var capabilities: Set<MiBandCapability> = [.bleDiscovery]
+        if !evidence.serviceUUIDs.isEmpty {
+            capabilities.insert(.serviceInventory)
+        }
+
         return MiBandDiscoveryAssessment(
             result: .recognizedButUnsupported,
-            capabilities: [.bleDiscovery, .serviceInventory],
+            capabilities: capabilities,
             reason: "Mi Band generation signature is not yet verified"
         )
     }
