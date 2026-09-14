@@ -62,8 +62,15 @@ public struct MiBandGenerationSignature: Equatable, Sendable {
     }
 
     fileprivate func matches(serviceUUIDs: Set<String>, characteristicUUIDs: Set<String>) -> Bool {
-        normalized(requiredServiceUUIDs).isSubset(of: normalized(serviceUUIDs)) &&
-            normalized(requiredCharacteristicUUIDs).isSubset(of: normalized(characteristicUUIDs))
+        let requiredServices = normalized(requiredServiceUUIDs)
+        let requiredCharacteristics = normalized(requiredCharacteristicUUIDs)
+
+        guard !requiredServices.isEmpty || !requiredCharacteristics.isEmpty else {
+            return false
+        }
+
+        return requiredServices.isSubset(of: normalized(serviceUUIDs)) &&
+            requiredCharacteristics.isSubset(of: normalized(characteristicUUIDs))
     }
 }
 

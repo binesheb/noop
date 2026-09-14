@@ -116,4 +116,17 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(result.result, .supported)
         XCTAssertTrue(result.capabilities.contains(.battery))
     }
+
+    func testEmptyGenerationSignatureNeverMatchesGattEvidence() {
+        let signature = MiBandGenerationSignature(identifier: "empty")
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["2A37"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+        XCTAssertFalse(result.reason.contains("verified generation signature"))
+    }
 }
