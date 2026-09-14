@@ -145,4 +145,25 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertFalse(result.capabilities.contains(.modelIdentification))
         XCTAssertFalse(result.reason.contains("verified generation signature"))
     }
+
+    func testAmbiguousGenerationSignaturesFailClosed() {
+        let first = MiBandGenerationSignature(
+            identifier: "fixture-generation-a",
+            requiredServiceUUIDs: ["ABCD"]
+        )
+        let second = MiBandGenerationSignature(
+            identifier: "fixture-generation-b",
+            requiredServiceUUIDs: ["ABCD"]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"]),
+            signatures: [first, second]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertEqual(result.reason, "multiple verified generation signatures match")
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+    }
 }
