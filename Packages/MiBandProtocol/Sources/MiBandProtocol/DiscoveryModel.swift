@@ -128,6 +128,14 @@ public enum MiBandDiscoveryModel {
         )
     }
 
+    /// Assesses evidence using only signatures accepted by the validated registry.
+    public static func assess(
+        _ evidence: MiBandDiscoveryEvidence,
+        registry: MiBandGenerationSignatureRegistry
+    ) -> MiBandDiscoveryAssessment {
+        assess(evidence, signatures: registry.signatures)
+    }
+
     private static func normalized(_ values: Set<String>) -> Set<String> {
         Set(values.compactMap { value in
             let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
