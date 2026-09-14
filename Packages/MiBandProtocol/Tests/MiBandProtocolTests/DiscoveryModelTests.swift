@@ -55,15 +55,18 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertFalse(result.capabilities.contains(.serviceInventory))
     }
 
-    func testDuplicateGattEntriesDoNotChangeAssessment() {
+    func testNormalizedDuplicateGattEntriesDoNotChangeAssessment() {
         let single = MiBandDiscoveryModel.assess(
             .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["2A37"])
         )
-        let duplicate = MiBandDiscoveryModel.assess(
-            .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["2A37"])
+        let normalizedDuplicates = MiBandDiscoveryModel.assess(
+            .init(
+                serviceUUIDs: ["180D", " 180d "],
+                characteristicUUIDs: ["2A37", " 2a37 "]
+            )
         )
 
-        XCTAssertEqual(single, duplicate)
+        XCTAssertEqual(single, normalizedDuplicates)
     }
 
     func testVerifiedSignatureProducesSupportedAssessment() {
