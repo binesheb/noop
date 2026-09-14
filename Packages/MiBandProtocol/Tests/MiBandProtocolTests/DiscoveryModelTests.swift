@@ -99,4 +99,21 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(result.result, .recognizedButUnsupported)
         XCTAssertFalse(result.capabilities.contains(.modelIdentification))
     }
+
+    func testGattUUIDMatchingIgnoresCaseAndSurroundingWhitespace() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["abcd"],
+            requiredCharacteristicUUIDs: ["  1234  "],
+            capabilities: [.battery]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: [" ABCD "], characteristicUUIDs: ["1234"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertTrue(result.capabilities.contains(.battery))
+    }
 }
