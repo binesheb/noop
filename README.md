@@ -44,7 +44,7 @@
   &nbsp;&nbsp;
   <img src="docs/assets/shot-android-trend.png" alt="A metric's own trend on Android" width="218">
 </p>
-<p align="center"><sub>The all-new <b>Liquid Metal</b> look: living liquid scores, a sky that moves with your day, rebuilt on every screen. The same Today on iPhone and Android, and a metric&rsquo;s own trend. One design across iPhone, Android &amp; Mac.</sub></p>
+<p align="center"><sub>The all-new <b>Liquid Metal</b> look: living liquid scores, a sky that moves with your day, rebuilt on every screen. The same Today on iPhone and Android, and a metric&rsquo;s own trend. One design across iPhone, Android and Mac.</sub></p>
 
 ---
 
@@ -92,7 +92,7 @@ Pre-built apps you can run right now:
 >   Protect" off**, install NOOP, then switch it **back on**.
 > - **Reinstalling is safe.** Uninstalling and installing again won't hurt anything — NOOP keeps all
 >   data on-device with `allowBackup=false`, so a reinstall simply starts fresh. There's no cloud copy
->   to lose either way.
+>   to lose either.
 
 Prefer to build it yourself? See [`docs/BUILD.md`](docs/BUILD.md).
 
@@ -290,7 +290,7 @@ NOOP is an independent, **experimental** project — capable, but a work in prog
 > isn't truly bonded to this device. Free it from everything else, then pair here.
 >
 > Bonding to NOOP may take the strap's bond away from the WHOOP app, so the official app might need to
-> re-pair afterwards. This is the **hardest part of 5/MG support** — if it refuses, you're almost
+> re-pair afterwards. This is the **hardest** part of 5/MG support — if it refuses, you're almost
 > certainly still bonded to the WHOOP app (or another device); free the strap and retry.
 
 The app always tells you what's live now versus still building, both in onboarding and on each screen.
@@ -347,7 +347,7 @@ from the official Oura app first, then pairing with NOOP on macOS, works. Docume
 > - **What happens after a membership lapses is untested.** We don't know whether the unlock persists,
 >   needs a server re-check, or reverts. Treat it as good for the period actually tested (one billing
 >   month), not as permanent.
-> - It **does not unlock the ❌ rows above.** HRV and respiratory rate are limited by what the ring's
+> - **It does not unlock the ❌ rows above.** HRV and respiratory rate are limited by what the ring's
 >   interval stream physically contains, not by an entitlement — no key changes that.
 > - Treat the key like a password. NOOP stores it locally (Keychain / EncryptedSharedPreferences) and
 >   transmits it nowhere.
@@ -417,9 +417,9 @@ tables created in `v1`–`v3`:
 ```sql
 CREATE TABLE hrSample      (deviceId TEXT, ts INTEGER, bpm INTEGER, PRIMARY KEY(deviceId, ts));
 CREATE TABLE rrInterval    (deviceId TEXT, ts INTEGER, rrMs INTEGER, PRIMARY KEY(deviceId, ts, rrMs));
-CREATE TABLE spo2Sample    (deviceId TEXT, ts INTEGER, red INTEGER, ir INTEGER, PRIMARY KEY(deviceId, ts));
+CREATE TABLE spo2Sample     (deviceId TEXT, ts INTEGER, red INTEGER, ir INTEGER, PRIMARY KEY(deviceId, ts));
 CREATE TABLE skinTempSample(deviceId TEXT, ts INTEGER, raw INTEGER, PRIMARY KEY(deviceId, ts));
-CREATE TABLE respSample    (deviceId TEXT, ts INTEGER, raw INTEGER, PRIMARY KEY(deviceId, ts));
+CREATE TABLE respSample     (deviceId TEXT, ts INTEGER, raw INTEGER, PRIMARY KEY(deviceId, ts));
 ```
 
 Later migrations add server-derived metric caches (`sleepSession`, `dailyMetric`),
@@ -548,7 +548,7 @@ thanks:
   service family, CRC16-Modbus header, and "puffin" packet types) that NOOP's
   WHOOP 5.0 path is ported from.
 - **`groue/GRDB.swift`** — SQLite persistence.
-- **`weichsel/ZIPFoundation`** — export unzipping.
+- **`weichsel/ZIPFoundation** — export unzipping.
 
 NOOP contains no WHOOP proprietary code, firmware, logos, or assets, and performs
 no DRM circumvention. Full detail in [`ATTRIBUTION.md`](ATTRIBUTION.md).
@@ -607,6 +607,8 @@ That's it — copy away.
 - [`DISCLAIMER.md`](DISCLAIMER.md) — trademark, interoperability, and medical/legal notice.
 - [`ATTRIBUTION.md`](ATTRIBUTION.md) — full credits and licensing notes.
 - [`project.yml`](project.yml) — XcodeGen project definition (source of `Strand.xcodeproj`).
+- [`docs/MIBAND_SUPPORT.md`](docs/MIBAND_SUPPORT.md) — verified Mi Band support boundary and fail-closed production status.
+- [`docs/MIBAND_CAPTURE_TEMPLATE.md`](docs/MIBAND_CAPTURE_TEMPLATE.md) — evidence template for future lawfully obtained Mi Band BLE captures.
 
 ---
 
@@ -619,7 +621,7 @@ protocol alongside us — this project is built on it.
 <p>
   <img alt="Open issues" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Fopen.json&style=flat-square">
   <img alt="Issues resolved" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Fresolved.json&style=flat-square">
-  <a href="https://github.com/ryanbr/noop/stargazers"><img alt="Stars" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Fstars.json&style=flat-square"></a>
+  <a href="https://github.com/ryanbr/noop/stargazers"><img alt="Stars" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Fforks.json&style=flat-square">
   <img alt="Forks" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Fforks.json&style=flat-square">
   <img alt="Commits per month" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Flastcommit.json&style=flat-square">
   <img alt="Last commit" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fryanbr%2Fnoop%2Fmain%2Fdocs%2Fstats%2Flastcommit.json&style=flat-square">
