@@ -44,7 +44,7 @@
   &nbsp;&nbsp;
   <img src="docs/assets/shot-android-trend.png" alt="A metric's own trend on Android" width="218">
 </p>
-<p align="center"><sub>The all-new <b>Liquid Metal</b> look: living liquid scores, a sky that moves with your day, rebuilt on every screen. The same Today on iPhone and Android, and a metric&rsquo;s own trend. One design across iPhone, Android and Mac.</sub></p>
+<p align="center"><sub>The all-new <b>Liquid Metal</b> look: living liquid scores, a sky that moves with your day, rebuilt on every screen. The same Today on iPhone and Android, and a metric&rsquo;s own trend. One design across iPhone, Android &amp; Mac.</sub></p>
 
 ---
 
@@ -92,7 +92,7 @@ Pre-built apps you can run right now:
 >   Protect" off**, install NOOP, then switch it **back on**.
 > - **Reinstalling is safe.** Uninstalling and installing again won't hurt anything — NOOP keeps all
 >   data on-device with `allowBackup=false`, so a reinstall simply starts fresh. There's no cloud copy
->   to lose either.
+>   to lose either way.
 
 Prefer to build it yourself? See [`docs/BUILD.md`](docs/BUILD.md).
 
@@ -290,7 +290,7 @@ NOOP is an independent, **experimental** project — capable, but a work in prog
 > isn't truly bonded to this device. Free it from everything else, then pair here.
 >
 > Bonding to NOOP may take the strap's bond away from the WHOOP app, so the official app might need to
-> re-pair afterwards. This is the **hardest** part of 5/MG support — if it refuses, you're almost
+> re-pair afterwards. This is the **hardest part of 5/MG support** — if it refuses, you're almost
 > certainly still bonded to the WHOOP app (or another device); free the strap and retry.
 
 The app always tells you what's live now versus still building, both in onboarding and on each screen.
@@ -347,7 +347,7 @@ from the official Oura app first, then pairing with NOOP on macOS, works. Docume
 > - **What happens after a membership lapses is untested.** We don't know whether the unlock persists,
 >   needs a server re-check, or reverts. Treat it as good for the period actually tested (one billing
 >   month), not as permanent.
-> - **It does not unlock the ❌ rows above.** HRV and respiratory rate are limited by what the ring's
+> - It **does not unlock the ❌ rows above.** HRV and respiratory rate are limited by what the ring's
 >   interval stream physically contains, not by an entitlement — no key changes that.
 > - Treat the key like a password. NOOP stores it locally (Keychain / EncryptedSharedPreferences) and
 >   transmits it nowhere.
@@ -590,7 +590,7 @@ under the same terms — see [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
 
 ### Mirroring & forking
 
-NOOP is public and built to be hard to erase. **Clone it freely** — `git clone https://github.com/ryanbr/noop.git` — and you're welcome to **mirror or fork** it to Codeberg, GitLab or your own server. More copies make the project more resilient, which is the whole point after being deplatformed.
+NOOP is public and built to be hard to erase. **Clone it freely** — `git clone https://github.com/ryanbr/noop.git` — and you're welcome to **mirror or fork it** to Codeberg, GitLab or your own server. More copies make the project more resilient, which is the whole point after being deplatformed.
 
 Two simple asks:
 
