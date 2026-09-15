@@ -32,6 +32,19 @@ final class GenerationSignatureRegistryTests: XCTestCase {
         XCTAssertEqual(registry?.signatures.first?.identifier, "fixture-generation")
     }
 
+    func testRegistryPreservesGattRequirementsAndCapabilities() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["180D"],
+            requiredCharacteristicUUIDs: ["2A37"],
+            capabilities: [.heartRate, .battery]
+        )
+
+        let registry = MiBandGenerationSignatureRegistry(signatures: [signature])
+
+        XCTAssertEqual(registry?.signatures, [signature])
+    }
+
     func testRegistryRejectsMalformedSignatures() {
         let malformed = MiBandGenerationSignature(identifier: "fixture")
 
