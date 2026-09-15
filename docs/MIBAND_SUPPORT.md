@@ -11,6 +11,10 @@ NOOP has an experimental Mi Band discovery boundary, but it does **not** current
 
 This is deliberate: advertising a generation as supported before its BLE identity and protocol behavior have been verified would make device detection unreliable and could lead to incorrect data interpretation.
 
+## Identity evidence
+
+A production registry entry must be based on stable, generation-specific evidence. Do **not** treat a marketed name, RSSI value, or other transient advertisement field as sufficient proof of generation identity. If multiple generations share an identifier, keep them unresolved until additional verified evidence distinguishes them.
+
 ## What is still needed
 
 Before registering a Mi Band generation, the implementation should have:
