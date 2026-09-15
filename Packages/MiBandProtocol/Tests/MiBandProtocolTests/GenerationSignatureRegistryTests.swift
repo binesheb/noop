@@ -2,6 +2,13 @@ import XCTest
 @testable import MiBandProtocol
 
 final class GenerationSignatureRegistryTests: XCTestCase {
+    func testEmptyRegistryContainsNoVerifiedSignatures() {
+        let registry = MiBandGenerationSignatureRegistry()
+
+        XCTAssertTrue(registry.signatures.isEmpty)
+        XCTAssertNil(registry.signature(forIdentifier: "fixture-generation"))
+    }
+
     func testRegistryAcceptsOnlyWellFormedUniqueSignatures() {
         let valid = MiBandGenerationSignature(
             identifier: "fixture",

@@ -4,6 +4,11 @@ import Foundation
 public struct MiBandGenerationSignatureRegistry: Equatable, Sendable {
     public let signatures: [MiBandGenerationSignature]
 
+    /// Creates an empty registry with no verified generation signatures.
+    public init() {
+        self.signatures = []
+    }
+
     /// Creates a registry only when every signature is well formed and has a unique identifier.
     ///
     /// The registry intentionally performs no generation inference and does not add signatures.
