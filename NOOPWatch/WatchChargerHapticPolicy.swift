@@ -4,13 +4,13 @@ import Foundation
 ///
 /// The first observed state is represented by `.unknown` and intentionally produces no haptic. Keeping
 /// this decision independent of WatchKit makes the transition rules small and deterministic.
-enum WatchChargerConnection: Equatable {
+enum WatchChargerConnection: Equatable, Sendable {
     case unknown
     case disconnected
     case connected
 }
 
-enum WatchChargerHaptic: Equatable {
+enum WatchChargerHaptic: Equatable, Sendable {
     case connect
     case disconnect
 }
