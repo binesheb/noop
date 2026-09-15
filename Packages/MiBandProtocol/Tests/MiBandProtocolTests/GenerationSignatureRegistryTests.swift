@@ -5,6 +5,7 @@ final class GenerationSignatureRegistryTests: XCTestCase {
     func testEmptyRegistryContainsNoVerifiedSignatures() {
         let registry = MiBandGenerationSignatureRegistry()
 
+        XCTAssertTrue(registry.isEmpty)
         XCTAssertTrue(registry.signatures.isEmpty)
         XCTAssertNil(registry.signature(forIdentifier: "fixture-generation"))
     }
