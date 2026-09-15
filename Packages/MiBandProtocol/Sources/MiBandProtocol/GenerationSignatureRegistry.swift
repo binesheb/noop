@@ -4,6 +4,9 @@ import Foundation
 public struct MiBandGenerationSignatureRegistry: Equatable, Sendable {
     public let signatures: [MiBandGenerationSignature]
 
+    /// Whether the registry contains no verified generation signatures.
+    public var isEmpty: Bool { signatures.isEmpty }
+
     /// Creates an empty registry with no verified generation signatures.
     public init() {
         self.signatures = []
