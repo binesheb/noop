@@ -82,12 +82,38 @@ public struct MiBandGenerationSignature: Equatable, Sendable {
 }
 
 public enum MiBandDiscoveryModel {
+    /// The production registry. It intentionally contains no signatures until they are verified from hardware evidence.
+    public static let verifiedGenerationRegistry = MiBandGenerationSignatureRegistry()
+
     /// Conservative first-stage assessment. No model is inferred from a name alone.
     public static func assess(
-        _ evidence: MiBandDiscoveryEvidence,
-        signatures: [MiBandGenerationSignature] = []
+        _ evidence: MiBandDiscoveryEvidence
     ) -> MiBandDiscoveryAssessment {
-        let serviceUUIDs = normalized(evidence.serviceUUIDs)
+        assess(evidence, registry: verifiedGenerationRegistry)
+    }
+
+    /// Assesses evidence against an explicit signature list. Kept for fixtures and controlled callers.
+    public static func assess(
+        _ evidence: MiBandDiscoveryEvidence,
+        signatures: [MiBandGenerationSignature]
+    ) -> MiBandDiscoveryAssessment {
+        assess(evidence, signatures: signatures, normalizedServiceUUIDs: nil)
+    }
+
+    /// Assesses evidence using only signatures accepted by the validated registry.
+    public static func assess(
+        _ evidence: MiBandDiscoveryEvidence,
+        registry: MiBandGenerationSignatureRegistry
+    ) -> MiBandDiscoveryAssessment {
+        assess(evidence, signatures: registry.signatures, normalizedServiceUUIDs: nil)
+    }
+
+    private static func assess(
+        _ evidence: MiBandDiscoveryEvidence,
+        signatures: [MiBandGenerationSignature],
+        normalizedServiceUUIDs: Set<String>?
+    ) -> MiBandDiscoveryAssessment {
+        let serviceUUIDs = normalizedServiceUUIDs ?? normalized(evidence.serviceUUIDs)
         let characteristicUUIDs = normalized(evidence.characteristicUUIDs)
 
         guard !serviceUUIDs.isEmpty || !characteristicUUIDs.isEmpty else {
@@ -126,14 +152,6 @@ public enum MiBandDiscoveryModel {
             capabilities: capabilities,
             reason: "Mi Band generation signature is not yet verified"
         )
-    }
-
-    /// Assesses evidence using only signatures accepted by the validated registry.
-    public static func assess(
-        _ evidence: MiBandDiscoveryEvidence,
-        registry: MiBandGenerationSignatureRegistry
-    ) -> MiBandDiscoveryAssessment {
-        assess(evidence, signatures: registry.signatures)
     }
 
     private static func normalized(_ values: Set<String>) -> Set<String> {
