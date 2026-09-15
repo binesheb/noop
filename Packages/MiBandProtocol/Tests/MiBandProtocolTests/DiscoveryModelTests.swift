@@ -71,6 +71,18 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(single, normalizedDuplicates)
     }
 
+    func testDefaultAssessmentUsesEmptyVerifiedRegistry() {
+        XCTAssertTrue(MiBandDiscoveryModel.verifiedGenerationRegistry.isEmpty)
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"], characteristicUUIDs: ["1234"])
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertEqual(result.reason, "Mi Band generation signature is not yet verified")
+    }
+
     func testVerifiedSignatureProducesSupportedAssessment() {
         let signature = MiBandGenerationSignature(
             identifier: "fixture-generation",
