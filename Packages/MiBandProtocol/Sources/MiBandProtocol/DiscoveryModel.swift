@@ -97,7 +97,7 @@ public enum MiBandDiscoveryModel {
         _ evidence: MiBandDiscoveryEvidence,
         signatures: [MiBandGenerationSignature]
     ) -> MiBandDiscoveryAssessment {
-        assess(evidence, signatures: signatures)
+        assessWithSignatures(evidence, signatures: signatures)
     }
 
     /// Assesses evidence using only signatures accepted by the validated registry.
@@ -105,10 +105,10 @@ public enum MiBandDiscoveryModel {
         _ evidence: MiBandDiscoveryEvidence,
         registry: MiBandGenerationSignatureRegistry
     ) -> MiBandDiscoveryAssessment {
-        assess(evidence, signatures: registry.signatures)
+        assessWithSignatures(evidence, signatures: registry.signatures)
     }
 
-    private static func assess(
+    private static func assessWithSignatures(
         _ evidence: MiBandDiscoveryEvidence,
         signatures: [MiBandGenerationSignature]
     ) -> MiBandDiscoveryAssessment {
