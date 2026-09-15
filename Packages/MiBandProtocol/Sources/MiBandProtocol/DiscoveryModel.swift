@@ -124,7 +124,9 @@ public enum MiBandDiscoveryModel {
         return MiBandDiscoveryAssessment(
             result: .recognizedButUnsupported,
             capabilities: capabilities,
-            reason: "Mi Band generation signature is not yet verified"
+            reason: signatures.isEmpty
+                ? "no verified generation signatures are registered"
+                : "Mi Band generation signature is not yet verified"
         )
     }
 

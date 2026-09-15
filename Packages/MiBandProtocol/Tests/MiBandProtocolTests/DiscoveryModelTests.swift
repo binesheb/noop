@@ -43,6 +43,7 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
         XCTAssertFalse(result.capabilities.contains(.heartRate))
         XCTAssertFalse(result.capabilities.contains(.activityHistory))
+        XCTAssertEqual(result.reason, "no verified generation signatures are registered")
     }
 
     func testCharacteristicEvidenceAloneDoesNotClaimServiceInventory() {
@@ -53,6 +54,7 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertEqual(result.result, .recognizedButUnsupported)
         XCTAssertEqual(result.capabilities, [.bleDiscovery])
         XCTAssertFalse(result.capabilities.contains(.serviceInventory))
+        XCTAssertEqual(result.reason, "no verified generation signatures are registered")
     }
 
     func testNormalizedDuplicateGattEntriesDoNotChangeAssessment() {
