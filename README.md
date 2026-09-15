@@ -607,6 +607,8 @@ That's it — copy away.
 - [`DISCLAIMER.md`](DISCLAIMER.md) — trademark, interoperability, and medical/legal notice.
 - [`ATTRIBUTION.md`](ATTRIBUTION.md) — full credits and licensing notes.
 - [`project.yml`](project.yml) — XcodeGen project definition (source of `Strand.xcodeproj`).
+- [`docs/MIBAND_SUPPORT.md`](docs/MIBAND_SUPPORT.md) — verified Mi Band support boundary and fail-closed production status.
+- [`docs/MIBAND_CAPTURE_TEMPLATE.md`](docs/MIBAND_CAPTURE_TEMPLATE.md) — evidence template for future lawfully obtained Mi Band BLE captures.
 
 ---
 
