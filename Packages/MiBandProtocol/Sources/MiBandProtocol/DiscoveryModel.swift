@@ -124,9 +124,15 @@ public enum MiBandDiscoveryModel {
         }
 
         if matchingSignatures.count == 1, let signature = matchingSignatures.first {
+            var capabilities: Set<MiBandCapability> = [.bleDiscovery, .modelIdentification]
+            if !serviceUUIDs.isEmpty {
+                capabilities.insert(.serviceInventory)
+            }
+            capabilities.formUnion(signature.capabilities)
+
             return MiBandDiscoveryAssessment(
                 result: .supported,
-                capabilities: [.bleDiscovery, .modelIdentification, .serviceInventory].union(signature.capabilities),
+                capabilities: capabilities,
                 reason: "verified generation signature: \(signature.identifier)"
             )
         }
