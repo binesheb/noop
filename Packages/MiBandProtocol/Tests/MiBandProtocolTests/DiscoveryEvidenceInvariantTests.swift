@@ -13,4 +13,13 @@ final class DiscoveryEvidenceInvariantTests: XCTestCase {
         XCTAssertEqual(result.result, .unknown)
         XCTAssertTrue(result.capabilities.isEmpty)
     }
+
+    func testMarketingNameAloneDoesNotIdentifyAnUnsupportedGeneration() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(localName: "Mi Smart Band")
+        )
+
+        XCTAssertEqual(result.result, .unknown)
+        XCTAssertTrue(result.capabilities.isEmpty)
+    }
 }
