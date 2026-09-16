@@ -182,6 +182,25 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertFalse(result.capabilities.contains(.modelIdentification))
     }
 
+    func testMismatchedServiceEvidencePreventsSignatureMatch() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["1234"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+        XCTAssertFalse(result.capabilities.contains(.battery))
+    }
+
     func testGattUUIDMatchingIgnoresCaseAndSurroundingWhitespace() {
         let signature = MiBandGenerationSignature(
             identifier: "fixture-generation",
