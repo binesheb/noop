@@ -128,7 +128,9 @@ public enum MiBandDiscoveryModel {
             if !serviceUUIDs.isEmpty {
                 capabilities.insert(.serviceInventory)
             }
-            capabilities.formUnion(signature.capabilities)
+            capabilities.formUnion(signature.capabilities.filter { capability in
+                capability != .serviceInventory || !serviceUUIDs.isEmpty
+            })
 
             return MiBandDiscoveryAssessment(
                 result: .supported,
