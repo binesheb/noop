@@ -2,75 +2,245 @@ import XCTest
 @testable import MiBandProtocol
 
 final class DiscoveryModelTests: XCTestCase {
-    func testEmptyEvidenceIsUnknown() {
-        let assessment = MiBandDiscoveryModel.assess(MiBandDiscoveryEvidence())
+    func testEmptyEvidenceFailsClosedAsUnknown() {
+        let result = MiBandDiscoveryModel.assess(.init())
 
-        XCTAssertEqual(assessment.result, .unknown)
-        XCTAssertTrue(assessment.capabilities.isEmpty)
-        XCTAssertEqual(assessment.reason, "insufficient GATT evidence")
+        XCTAssertEqual(result.result, .unknown)
+        XCTAssertTrue(result.capabilities.isEmpty)
     }
 
-    func testLocalNameAloneDoesNotIdentifyMiBand() {
-        let evidence = MiBandDiscoveryEvidence(localName: "Mi Smart Band")
+    func testWhitespaceOnlyGattEvidenceFailsClosedAsUnknown() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(
+                serviceUUIDs: ["  "],
+                characteristicUUIDs: ["\n"]
+            )
+        )
 
-        let assessment = MiBandDiscoveryModel.assess(evidence)
-
-        XCTAssertEqual(assessment.result, .unknown)
-        XCTAssertTrue(assessment.capabilities.isEmpty)
+        XCTAssertEqual(result.result, .unknown)
+        XCTAssertTrue(result.capabilities.isEmpty)
     }
 
-    func testServiceEvidenceWithoutVerifiedSignatureIsRecognizedButUnsupported() {
-        let evidence = MiBandDiscoveryEvidence(serviceUUIDs: ["180D"])
+    func testLocalNameAloneDoesNotIdentifyAMiBand() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(localName: "Mi Smart Band")
+        )
 
-        let assessment = MiBandDiscoveryModel.assess(evidence)
-
-        XCTAssertEqual(assessment.result, .recognizedButUnsupported)
-        XCTAssertEqual(assessment.capabilities, [.bleDiscovery, .serviceInventory])
-        XCTAssertEqual(assessment.reason, "no verified generation signatures are registered")
+        XCTAssertEqual(result.result, .unknown)
+        XCTAssertTrue(result.capabilities.isEmpty)
     }
 
-    func testCharacteristicEvidenceWithoutVerifiedSignatureIsRecognizedButUnsupported() {
-        let evidence = MiBandDiscoveryEvidence(characteristicUUIDs: ["2A37"])
+    func testGattEvidenceDoesNotClaimMetricSupportBeforeGenerationIsVerified() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(
+                localName: "Mi Smart Band",
+                serviceUUIDs: ["180D"],
+                characteristicUUIDs: ["2A37"]
+            )
+        )
 
-        let assessment = MiBandDiscoveryModel.assess(evidence)
-
-        XCTAssertEqual(assessment.result, .recognizedButUnsupported)
-        XCTAssertEqual(assessment.capabilities, [.bleDiscovery])
-        XCTAssertEqual(assessment.reason, "no verified generation signatures are registered")
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertFalse(result.capabilities.contains(.heartRate))
+        XCTAssertFalse(result.capabilities.contains(.activityHistory))
+        XCTAssertEqual(result.reason, "no verified generation signatures are registered")
     }
 
-    func testVerifiedServiceSignatureReportsServiceInventory() {
+    func testCharacteristicEvidenceAloneDoesNotClaimServiceInventory() {
+        let result = MiBandDiscoveryModel.assess(
+            .init(characteristicUUIDs: ["2A37"])
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery])
+        XCTAssertFalse(result.capabilities.contains(.serviceInventory))
+        XCTAssertEqual(result.reason, "no verified generation signatures are registered")
+    }
+
+    func testNormalizedDuplicateGattEntriesDoNotChangeAssessment() {
+        let single = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["2A37"])
+        )
+        let normalizedDuplicates = MiBandDiscoveryModel.assess(
+            .init(
+                serviceUUIDs: ["180D", " 180d "],
+                characteristicUUIDs: ["2A37", " 2a37 "]
+            )
+        )
+
+        XCTAssertEqual(single, normalizedDuplicates)
+    }
+
+    func testDefaultAssessmentUsesEmptyVerifiedRegistry() {
+        XCTAssertTrue(MiBandDiscoveryModel.verifiedGenerationRegistry.isEmpty)
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"], characteristicUUIDs: ["1234"])
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertEqual(result.reason, "Mi Band generation signature is not yet verified")
+    }
+
+    func testVerifiedSignatureProducesSupportedAssessment() {
         let signature = MiBandGenerationSignature(
             identifier: "fixture-generation",
-            requiredServiceUUIDs: ["180D"],
-            capabilities: [.heartRate]
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
         )
-        let registry = MiBandGenerationSignatureRegistry(signatures: [signature])!
-        let evidence = MiBandDiscoveryEvidence(serviceUUIDs: ["180D"])
 
-        let assessment = MiBandDiscoveryModel.assess(evidence, registry: registry)
-
-        XCTAssertEqual(assessment.result, .supported)
-        XCTAssertEqual(
-            assessment.capabilities,
-            [.bleDiscovery, .modelIdentification, .serviceInventory, .heartRate]
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"], characteristicUUIDs: ["1234"]),
+            signatures: [signature]
         )
-        XCTAssertEqual(assessment.reason, "verified generation signature: fixture-generation")
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .modelIdentification, .serviceInventory, .battery])
+        XCTAssertEqual(result.reason, "verified generation signature: fixture-generation")
     }
 
-    func testVerifiedCharacteristicSignatureDoesNotReportServiceInventory() {
+    func testCharacteristicOnlyVerifiedSignatureDoesNotClaimServiceInventory() {
+        let signature = MiBandGenerationSignature(
+            identifier: "characteristic-only-fixture",
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(characteristicUUIDs: ["1234"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .modelIdentification, .battery])
+        XCTAssertFalse(result.capabilities.contains(.serviceInventory))
+    }
+
+    func testCharacteristicOnlySignatureCannotGrantServiceInventoryCapability() {
+        let signature = MiBandGenerationSignature(
+            identifier: "characteristic-only-fixture",
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery, .serviceInventory]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(characteristicUUIDs: ["1234"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .modelIdentification, .battery])
+        XCTAssertFalse(result.capabilities.contains(.serviceInventory))
+    }
+
+    func testRegistryAssessmentUsesOnlyValidatedSignatures() {
         let signature = MiBandGenerationSignature(
             identifier: "fixture-generation",
-            requiredCharacteristicUUIDs: ["2A37"],
-            capabilities: [.heartRate, .serviceInventory]
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
         )
         let registry = MiBandGenerationSignatureRegistry(signatures: [signature])!
-        let evidence = MiBandDiscoveryEvidence(characteristicUUIDs: ["2A37"])
 
-        let assessment = MiBandDiscoveryModel.assess(evidence, registry: registry)
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"], characteristicUUIDs: ["1234"]),
+            registry: registry
+        )
 
-        XCTAssertEqual(assessment.result, .supported)
-        XCTAssertEqual(assessment.capabilities, [.bleDiscovery, .modelIdentification, .heartRate])
-        XCTAssertEqual(assessment.reason, "verified generation signature: fixture-generation")
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .modelIdentification, .serviceInventory, .battery])
+        XCTAssertEqual(result.reason, "verified generation signature: fixture-generation")
+    }
+
+    func testSignatureRequiresAllDeclaredGattEvidence() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+    }
+
+    func testGattUUIDMatchingIgnoresCaseAndSurroundingWhitespace() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["abcd"],
+            requiredCharacteristicUUIDs: ["  1234  "],
+            capabilities: [.battery]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: [" ABCD "], characteristicUUIDs: ["1234"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .supported)
+        XCTAssertTrue(result.capabilities.contains(.battery))
+    }
+
+    func testEmptyGenerationSignatureNeverMatchesGattEvidence() {
+        let signature = MiBandGenerationSignature(identifier: "empty")
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["180D"], characteristicUUIDs: ["2A37"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+        XCTAssertFalse(result.reason.contains("verified generation signature"))
+    }
+
+    func testBlankGenerationSignatureIdentifierNeverMatchesGattEvidence() {
+        let signature = MiBandGenerationSignature(
+            identifier: " \n",
+            requiredServiceUUIDs: ["180D"]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["180D"]),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+        XCTAssertFalse(result.reason.contains("verified generation signature"))
+    }
+
+    func testAmbiguousGenerationSignaturesFailClosed() {
+        let first = MiBandGenerationSignature(
+            identifier: "fixture-generation-a",
+            requiredServiceUUIDs: ["ABCD"]
+        )
+        let second = MiBandGenerationSignature(
+            identifier: "fixture-generation-b",
+            requiredServiceUUIDs: ["ABCD"]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(serviceUUIDs: ["ABCD"]),
+            signatures: [first, second]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertEqual(result.reason, "multiple verified generation signatures match")
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+    }
+
+    func testGenerationSignatureValidationRejectsBlankOrEmptyDefinitions() {
+        XCTAssertFalse(MiBandGenerationSignature(identifier: " \n", requiredServiceUUIDs: ["180D"]).isWellFormed)
+        XCTAssertFalse(MiBandGenerationSignature(identifier: "fixture").isWellFormed)
+        XCTAssertFalse(MiBandGenerationSignature(identifier: "fixture", requiredServiceUUIDs: [" \n"]).isWellFormed)
+        XCTAssertTrue(MiBandGenerationSignature(identifier: "fixture", requiredServiceUUIDs: ["180D"]).isWellFormed)
     }
 }
