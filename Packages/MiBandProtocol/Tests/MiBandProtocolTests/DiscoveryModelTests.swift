@@ -147,6 +147,30 @@ final class DiscoveryModelTests: XCTestCase {
         XCTAssertFalse(result.capabilities.contains(.serviceInventory))
     }
 
+    func testAdvertisementMetadataCannotOverrideGattSignatureMismatch() {
+        let signature = MiBandGenerationSignature(
+            identifier: "fixture-generation",
+            requiredServiceUUIDs: ["ABCD"],
+            requiredCharacteristicUUIDs: ["1234"],
+            capabilities: [.battery]
+        )
+
+        let result = MiBandDiscoveryModel.assess(
+            .init(
+                localName: "Mi Smart Band 9 Pro",
+                manufacturerData: Data([0xFF, 0xEE, 0xDD, 0xCC]),
+                serviceUUIDs: ["180D"],
+                characteristicUUIDs: ["2A37"]
+            ),
+            signatures: [signature]
+        )
+
+        XCTAssertEqual(result.result, .recognizedButUnsupported)
+        XCTAssertEqual(result.capabilities, [.bleDiscovery, .serviceInventory])
+        XCTAssertFalse(result.capabilities.contains(.modelIdentification))
+        XCTAssertFalse(result.capabilities.contains(.battery))
+    }
+
     func testRegistryAssessmentUsesOnlyValidatedSignatures() {
         let signature = MiBandGenerationSignature(
             identifier: "fixture-generation",
