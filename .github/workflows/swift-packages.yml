@@ -50,6 +50,7 @@ jobs:
           - WhoopProtocol
           - OuraProtocol
           - PolarProtocol
+          - MiBandProtocol
           - WhoopStore
           - StrandAnalytics
           - StrandImport
@@ -70,9 +71,9 @@ jobs:
   # The Tools/ SwiftPM packages, which path-depend on Packages/ above and were built by nothing.
   #
   # SleepBench is the instrument the sleep work is argued with — #934's stage-fraction tables came out of
-  # it — and #935 added 13 tests that no job ran. A tool whose numbers decide whether a staging change
-  # lands has to keep compiling against the packages it measures, or it bitrots silently and the next
-  # person to reach for it finds it broken. Backfill has no tests yet, so it is build-only.
+  # it — and #935 added 13 tests that no job ran. A tool whose numbers decide whether a staging change lands
+  # has to keep compiling against the packages it measures, or it bitrots silently and the next person to
+  # reach for it finds it broken. Backfill has no tests yet, so it is build-only.
   #
   # SleepPSG has a second, sharper reason to be here. Its variant scores run through a knob-for-knob PORT of
   # `SleepStagerV2`, and its test suite is what proves that port still reproduces the shipped stager
