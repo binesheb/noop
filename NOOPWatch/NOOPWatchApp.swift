@@ -8,12 +8,13 @@ import StrandDesign
 // recomputes a score. The one thing the watch measures locally is its OWN heart rate (HealthKit), shown
 // as a live readout alongside the synced scores.
 //
-// Two long-lived objects own the data:
-//   - WatchScoreStore  receives the phone's snapshot, persists it to the shared App Group, drives the
-//                      complication reload, and publishes it to the glance.
-//   - WatchLiveHR      streams the watch's own heart rate (guarded behind HealthKit authorization).
+// Three long-lived objects own the watch data/feedback:
+//   - WatchScoreStore receives the phone's snapshot, persists it to the shared App Group, drives the
+//     complication reload, and publishes it to the glance.
+//   - WatchLiveHR streams the watch's own heart rate (guarded behind HealthKit authorization).
+//   - WatchChargerHaptics watches charger mount state and gives connect/disconnect feedback.
 //
-// Both are created once here and handed to the glance as environment objects so the view stays pure.
+// All three are created once here so their observers live for the watch app lifetime.
 
 @main
 struct NOOPWatchApp: App {
@@ -21,6 +22,7 @@ struct NOOPWatchApp: App {
     // phone sent while the app was backgrounded is delivered as soon as we come up.
     @StateObject private var store = WatchScoreStore()
     @StateObject private var liveHR = WatchLiveHR()
+    private let chargerHaptics = WatchChargerHaptics()
 
     init() {
         #if DEBUG
